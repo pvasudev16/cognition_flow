@@ -1,8 +1,9 @@
 # Cognition Flow
 Noun: An app that summarizes and displays text in digestible bits
+
 Verb: The act of running Cognition Flow
 
-FYI, "CogniFlow" is the marketing name of the app
+"CogniFlow" is the *nom-de-guerre* of our app
 
 ## Quickstart Guide
 For something that works, run:
@@ -33,7 +34,8 @@ Using OpenAI's davinci-text-003 model to summarize the text in
 ```
 $python3 main.py ./elephants_short.txt 4 OpenAI text-davinci-003
 LLM's summary:
-Elephants are largest land animals; three species survive; family Elephantidae and order Proboscidea.
+Elephants are largest land animals; three species survive; family
+Elephantidae and order Proboscidea.
 
 The actual text:
 Elephants are the largest existing land animals. Three living species 
@@ -45,7 +47,8 @@ became extinct during the Late Pleistocene epoch.
 
 
 LLM's summary:
-Elephants have trunk, tusks, large ears, legs. Trunk used for breathing, tusks for weapons, ears for communication.
+Elephants have trunk, tusks, large ears, legs. Trunk used for breathing,
+tusks for weapons, ears for communication.
 
 The actual text:
 Distinctive features 
@@ -58,7 +61,8 @@ The large ear flaps assist in maintaining a constant body temperature
 as well as in communication. 
 
 LLM's summary:
-Africans: large ears, concave backs; Asians: small ears, convex/level backs.
+Africans: large ears, concave backs; Asians: small ears, convex/level
+backs.
 
 The actual text:
 African elephants have larger ears and 
@@ -105,6 +109,8 @@ python3 -m pip install -r requirements.txt
 ```
 ## Roadmap
 Lowest-hanging fruit:
+- Move utility functions (e.g. `print_sentences_and_tokens`)
+  into their own file. 
 - Incorporate a reading time estimate
 
 Next lowest-hanging fruit:
