@@ -1,0 +1,3 @@
+langchain
+stanza
+python-dotenv
