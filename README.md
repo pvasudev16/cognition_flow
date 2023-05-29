@@ -30,7 +30,8 @@ Positional arguments are:
    and the latter doesn't work at all)
 
 Using OpenAI's davinci-text-003 model to summarize the text in
-`./elephants_short.txt`, this is the output:
+[`./elephants_short.txt`](https://github.com/pvasudev16/cognition_flow/blob/main/elephants_short.txt),
+this is the output:
 ```
 $python3 main.py ./elephants_short.txt 4 OpenAI text-davinci-003
 LLM's summary:
