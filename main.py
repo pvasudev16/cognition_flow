@@ -62,9 +62,10 @@ class LLMSpecification:
                 + "as:\nOPEN_AI_KEY=sk_[your key]"
               )
           self.llm = OpenAI(
-              model_name=model_name,
+              model=model_name,
               openai_api_key=environment_values["OPEN_AI_KEY"],
-              temperature=0.9
+              temperature=0.9,
+              client="",
           )
 
       elif model_hub == "HuggingFaceHub":
@@ -79,7 +80,8 @@ class LLMSpecification:
               huggingfacehub_api_token=(
                 environment_values["HUGGINGFACEHUB_API_TOKEN"]
               ),
-              repo_id=model_name
+              repo_id=model_name,
+              client=None,
           )
 
       else:
