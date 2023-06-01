@@ -16,11 +16,6 @@ class CognitionFlowApiHandler(Resource):
     raw_content = args['postContent']
     ret_msg = raw_content
 
-    if ret_msg:
-      message = "Your Message Requested: {}".format(ret_msg)
-    else:
-      message = "No Msg"
-    
     # placeholder for the actual model
     final_ret = {"status": "Success", "summary": "Africans: large ears, concave backs; Asians: small ears, convex/level backs."}
 

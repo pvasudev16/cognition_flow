@@ -135,14 +135,26 @@ The next steps:
   with the command line arguments shown above.
 
 
-### LOCAL DEVELOPMENT
-Open two terminals and run the following commands in each:
-#### Backend (Flask)
+## LOCAL DEVELOPMENT
+### Prerequisite
+- Install npm (Mac)
 ```bash
-flask --app app.py --debug run`
+brew install node 
+```
+- Install react-scripts
+```bash
+npm install react-scripts 
 ```
 
-#### Frontend (React)
+### Start the servers
+
+Open two terminals and run the following commands in each:
+- Backend (Flask)
+```bash
+flask --app app.py --debug run
+```
+
+- Frontend (React)
 ```bash
 cd frontend && npm start
 ```
