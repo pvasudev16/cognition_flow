@@ -97,7 +97,7 @@ class LLMSpecification:
         return self.model_hub
 
 
-def main():
+def main(PATH_TO_FILE, NUM_SENTENCES, MODEL_HUB, MODEL_NAME):
     """
     Read in a text and display a summary and the actual text in
     segments of number_of_sentences sentences.
@@ -115,12 +115,12 @@ def main():
     # Place holder: error check if they provide more than/less than two 
     # command line arguments
     
-    args = sys.argv[1:]
-    if len(args) == 4:
-        PATH_TO_FILE = args[0]
-        NUM_SENTENCES = int(args[1])
-        MODEL_HUB = args[2]
-        MODEL_NAME = args[3]
+    # args = sys.argv[1:]
+    # if len(args) == 4:
+    #     PATH_TO_FILE = args[0]
+    #     NUM_SENTENCES = int(args[1])
+    #     MODEL_HUB = args[2]
+    #     MODEL_NAME = args[3]
     
 
     # Place holder: error check if we can't find the file

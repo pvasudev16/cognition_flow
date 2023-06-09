@@ -17,7 +17,7 @@ class Form extends React.Component {
     const formData = new FormData(form);
 
     // Pass formData as a fetch body directly
-    fetch('http://127.0.0.1:5000/cognition_flow/', {
+    fetch('http://127.0.0.1:5000/', {
       headers: {
         Accept: 'application/json',
       }, method: form.method, body: formData
@@ -37,10 +37,10 @@ class Form extends React.Component {
       <div className="App">
         <header className="App-header">
           <form method="post" onSubmit={this.handleSubmit}>
-
-            {/* <label>
-          <input name="postTitle" defaultValue="" />
-        </label> */}
+            {<label>
+              input number of sentences
+          <input name="numSentences" defaultValue="" />
+        </label>}
             <label>
               <textarea
                 name="postContent"
