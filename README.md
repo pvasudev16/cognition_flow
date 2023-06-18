@@ -14,7 +14,7 @@ python3 main.py ./elephants_short.txt 4 OpenAI text-davinci-003
 
 For something that works less well, but is free, run:
 ```bash
-python3 main.py ./elephants_short.txt 4 HuggingFaceHubg gpt2
+python3 main.py ./elephants_short.txt 4 HuggingFaceHub gpt2
 ```
 
 Positional arguments are:
@@ -81,7 +81,7 @@ be able to manage your API tokens. If you lose yours, make a new one
 and copy it. Save it in a password manager or somewhere safe.
 
 For a HuggingFaceHub API token, go to your HuggingFace profile, click
-settings, and click Tokens. You should be able to copy yours.
+settings, and click Access Tokens. You should be able to copy yours.
 
 Once you have these tokens, create a file called `.env` in the same
 directory as the `main.py` folder. In it, it should look like:
@@ -135,3 +135,32 @@ The next steps:
   with the command line arguments shown above.
 
 
+## LOCAL DEVELOPMENT
+### Prerequisite
+- Install npm (Mac)
+```bash
+brew install node 
+```
+- Install react-scripts
+```bash
+npm install react-scripts 
+```
+
+### Start the servers
+
+Open two terminals and run the following commands in each:
+- Backend (Flask)
+Enter debugging mode:
+```base
+export FLASK_DEBUG=1
+export FLASK_APP=app.py
+```
+
+```bash
+flask run
+```
+
+- Frontend (React)
+```bash
+cd frontend && npm start
+```
