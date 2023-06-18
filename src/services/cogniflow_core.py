@@ -1,10 +1,34 @@
-from src.models.llm_specification_model import LLMSpecification
-
-
+import sys
+from typing import *
 import stanza
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+import dotenv
+from langchain.llms import HuggingFaceHub, OpenAI
 
+
+def print_sentences_and_tokens(document : stanza.Document) -> None:
+      """
+      Utility function for debugging.
+      This function prints out the token id and the text associated
+      with each token id for each sentence int he stanza document
+      """
+      for i, sentence in enumerate(document.sentences):
+        print(f'====== Sentence {i+1} tokens =======')
+        print(
+            *[
+                f'id: {token.id}\ttext: {token.text}'
+                for token in sentence.tokens
+              ],
+            sep='\n'
+        )
+
+def print_sentences(document : stanza.Document) -> None:
+    """
+    Utility function to print out the sentences in a stanza document
+    """
+    for s in document.sentences:
+        print(s.text + " ")
 
 def get_next_sentences(
     document : stanza.Document,
@@ -12,15 +36,108 @@ def get_next_sentences(
     number_of_sentences : int
 ):
     sentences = ""
-    for j in range(int(number_of_sentences)):
+    for j in range(number_of_sentences):
         if starting_position + j >= len(document.sentences):
             break
         sentences += document.sentences[starting_position + j].text
         sentences += " "
     return sentences
 
+class LLMSpecification:
+    def __init__(self, model_hub, model_name):
+      self.model_hub = model_hub
+      self.model_name = model_name
+      
+      # Place holder: throw an error if there is no .env file
 
-def cogniflow_core(raw_text, num_of_sentences, model_hub, model_name):
+      dotenv.load_dotenv()
+      environment_values = dotenv.dotenv_values()
+
+      if model_hub == "OpenAI":
+          try:
+              assert environment_values["OPEN_AI_KEY"]
+          except:
+              print(
+                "You must supply your OpenAI API key in the .env file "
+                + "as:\nOPEN_AI_KEY=sk_[your key]"
+              )
+          self.llm = OpenAI(
+              model=model_name,
+              openai_api_key=environment_values["OPEN_AI_KEY"],
+              temperature=0.9,
+              client="",
+          )
+
+      elif model_hub == "HuggingFaceHub":
+          try:
+              assert environment_values["HUGGINGFACEHUB_API_TOKEN"]
+          except:
+              print(
+                "You must supply your HuggingFaceHub API key in the "
+                + ".env file as:\nHUGGINFACEHUB_API_TOKEN=hf_[your key]"
+              )
+          self.llm = HuggingFaceHub(
+              huggingfacehub_api_token=(
+                environment_values["HUGGINGFACEHUB_API_TOKEN"]
+              ),
+              repo_id=model_name,
+              client=None,
+          )
+
+      else:
+          raise Exception("Model hub must be OpenAI or HuggingFaceHub")
+      
+    def get_llm(self):
+        return self.llm
+
+    def get_model_name(self):
+        return self.model_name
+    
+    def get_model_hub(self):
+        return self.model_hub
+
+
+def cogniflow_core(PATH_TO_FILE, NUM_SENTENCES, MODEL_HUB, MODEL_NAME):
+    """
+    Read in a text and display a summary and the actual text in
+    segments of number_of_sentences sentences.
+
+    Command line arguments should be:
+    1) Path to a text file, called path_to_text (e.g. ./elephants.txt)
+    2) Number of sentences to summarise at at time, called 
+       number_of_setneces (e.g. 5)
+    3) Model hub to use. Currently only "OpenAI" or "HuggingFaceHub"
+       are supported.
+    4) A model name to use. Use "text-davinci-003" for OpenAI and
+       whatever model you want from HuggingFaceHub (e.g. "gpt2")
+    """
+
+    # Place holder: error check if they provide more than/less than two 
+    # command line arguments
+    
+    # args = sys.argv[1:]
+    # if len(args) == 4:
+    #     PATH_TO_FILE = args[0]
+    #     NUM_SENTENCES = int(args[1])
+    #     MODEL_HUB = args[2]
+    #     MODEL_NAME = args[3]
+    
+
+    # Place holder: error check if we can't find the file
+
+    # Read in all the text, and get it into a single string, which
+    # we'll call the document
+    # file_to_read = open(PATH_TO_FILE, "r")
+    # lines = []
+    # while True:
+    #     line = file_to_read.readline()
+    #     lines.append(line)
+    #     if not line:
+    #         break
+    # raw_text = "".join(lines)
+    raw_text = PATH_TO_FILE
+    # Use stanza to tokenize the document and find all the sentences.
+    # Refer to the output of the tokenizer as the "document"
     tokenizer = stanza.Pipeline(
         lang='en',
         processors='tokenize',
@@ -37,33 +154,29 @@ def cogniflow_core(raw_text, num_of_sentences, model_hub, model_name):
     # split the template string over multiple lines
     prompt = PromptTemplate(
       input_variables=["text_to_summarize"],
-      template="{text_to_summarize}?",
+      template="Can you please summarize the following text in 10 words: {text_to_summarize}?",
     )
-
 
     # Define which LLM we want to use. Right now, limit it to OpenAI
     # or HuggingFaceHub.
-    llm = LLMSpecification(model_hub, model_name).get_llm()
+    llm = LLMSpecification(MODEL_HUB, MODEL_NAME).get_llm()
 
-    # Sequentially get the next num_of_sentences.
+    # Sequentially get the next NUM_SENTENCES.
+    response = ""
     summaries = []
-
-    print(f"{num_of_sentences=}, {number_of_sentences_in_document=}")
-    chain = LLMChain(llm=llm, prompt=prompt)
-    response = chain.run(raw_text)
     for i in range(
         0,
         number_of_sentences_in_document,
-        int(num_of_sentences)
+        int(NUM_SENTENCES)
     ):
-        next_sentences = get_next_sentences(document, i, num_of_sentences)
-        print(f"{next_sentences=}")
+        next_sentences = get_next_sentences(document, i, int(NUM_SENTENCES))
         chain = LLMChain(llm=llm, prompt=prompt)
         summaries.append(chain.run(next_sentences))
-        print(f"{summaries=}")
-        print("LLM's summary:\n" + summaries[-1])
-        print("\n")
-        print("The actual text:\n" + next_sentences)
-        print("\n\n\n\n")
+        response += "LLM's summary:\n" + summaries[-1]
+        response += "\n"
+        response += "The actual text:\n" + next_sentences
+        response += "\n\n"
     
     return response
+
+
