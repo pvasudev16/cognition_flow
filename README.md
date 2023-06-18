@@ -150,8 +150,14 @@ npm install react-scripts
 
 Open two terminals and run the following commands in each:
 - Backend (Flask)
+Enter debugging mode:
+```base
+export FLASK_DEBUG=1
+export FLASK_APP=app.py
+```
+
 ```bash
-flask --app app.py --debug run
+flask run
 ```
 
 - Frontend (React)

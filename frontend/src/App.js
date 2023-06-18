@@ -44,7 +44,7 @@ class Form extends React.Component {
             <label>
               <textarea
                 name="postContent"
-                defaultValue="Paste the text here.."
+                defaultValue=""
                 rows={20}
                 cols={80}
               />
