@@ -110,13 +110,6 @@ def main():
         print("\n")
         print("The actual text:\n" + next_sentences)
         print("\n\n\n\n")
-    
 
 if __name__ == "__main__":
     main()
-
-
-
-
-# hub_llm = HuggingFaceHub(repo_id="https://huggingface.co/gpt2")
-

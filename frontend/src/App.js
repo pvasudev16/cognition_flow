@@ -31,17 +31,20 @@ class Form extends React.Component {
         }));
   };
 
-
   render() {
     return (
       <div className="App">
         <header className="App-header">
-          <form method="post" onSubmit={this.handleSubmit}>
-            {<label>
-              input number of sentences
-          <input name="numSentences" defaultValue="" />
-        </label>}
+          <form method="post" onSubmit={this.handleSubmit}>{
             <label>
+              Input the number of sentences you wish to summarize at
+              a time
+              <input name="numSentences" defaultValue=""/>
+            </label>
+          }
+          <br></br>
+            <label>
+              Enter the text you want to summarize
               <textarea
                 name="postContent"
                 defaultValue=""
@@ -57,7 +60,6 @@ class Form extends React.Component {
           <p>Cognition Flow</p>
         </header>
       </div>
-
     );
   }
 }
