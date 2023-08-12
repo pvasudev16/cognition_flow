@@ -5,7 +5,7 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 import dotenv
 from langchain.llms import HuggingFaceHub, OpenAI
-from models.llm_specification_model import LLMSpecification
+from src.models.llm_specification_model import LLMSpecification
 from src.services.cogniflow_core import get_next_sentences
 
 
