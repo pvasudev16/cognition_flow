@@ -5,16 +5,16 @@ Verb: The act of running Cognition Flow
 
 "CogniFlow" is the *nom-de-guerre* of our app
 
-## Quickstart Guide
+## Quickstart Guide for Command Line Application
 For something that works, run:
 ```bash
 python3 main.py ./elephants_short.txt 4 OpenAI text-davinci-003
 ```
 (You'll need to get some OpenAI credits).
 
-For something that works less well, but is free, run:
+For something that works, but is free, run:
 ```bash
-python3 main.py ./elephants_short.txt 4 HuggingFaceHub gpt2
+python3 main.py ./elephants_short.txt 4 HuggingFaceHub google/flan-t5-xxl
 ```
 
 Positional arguments are:
@@ -108,6 +108,36 @@ Then install the requirements via
 ```bash
 python3 -m pip install -r requirements.txt
 ```
+
+## Local Development for Web App
+### Prerequisite
+- Install npm (Mac)
+```bash
+brew install node 
+```
+- Install react-scripts
+```bash
+npm install react-scripts 
+```
+
+### Start the servers
+Open two terminals and run the following commands in each:
+- Backend (Flask)
+Enter debugging mode:
+```base
+export FLASK_DEBUG=1
+export FLASK_APP=app.py
+```
+
+```bash
+python3 -m flask run
+```
+
+- Frontend (React)
+```bash
+cd frontend && npm start
+```
+
 ## Roadmap
 Lowest-hanging fruit:
 - Move utility functions (e.g. `print_sentences_and_tokens`)
@@ -133,34 +163,3 @@ The next steps:
   think of how chatGPT replies to your queries when you use it.
 - Write up an API to ping CogniFlow. A base idea could be to ping it
   with the command line arguments shown above.
-
-
-## LOCAL DEVELOPMENT
-### Prerequisite
-- Install npm (Mac)
-```bash
-brew install node 
-```
-- Install react-scripts
-```bash
-npm install react-scripts 
-```
-
-### Start the servers
-
-Open two terminals and run the following commands in each:
-- Backend (Flask)
-Enter debugging mode:
-```base
-export FLASK_DEBUG=1
-export FLASK_APP=app.py
-```
-
-```bash
-python3 -m flask run
-```
-
-- Frontend (React)
-```bash
-cd frontend && npm start
-```
