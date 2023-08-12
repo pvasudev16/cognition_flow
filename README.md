@@ -157,7 +157,7 @@ export FLASK_APP=app.py
 ```
 
 ```bash
-flask run
+python3 -m flask run
 ```
 
 - Frontend (React)
