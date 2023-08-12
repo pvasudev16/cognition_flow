@@ -97,7 +97,7 @@ class LLMSpecification:
         return self.model_hub
 
 
-def cogniflow_core(PATH_TO_FILE, NUM_SENTENCES, MODEL_HUB, MODEL_NAME):
+def cogniflow_core(RAW_TEXT, NUM_SENTENCES, MODEL_HUB, MODEL_NAME):
     """
     Read in a text and display a summary and the actual text in
     segments of number_of_sentences sentences.
@@ -112,30 +112,8 @@ def cogniflow_core(PATH_TO_FILE, NUM_SENTENCES, MODEL_HUB, MODEL_NAME):
        whatever model you want from HuggingFaceHub (e.g. "gpt2")
     """
 
-    # Place holder: error check if they provide more than/less than two 
-    # command line arguments
-    
-    # args = sys.argv[1:]
-    # if len(args) == 4:
-    #     PATH_TO_FILE = args[0]
-    #     NUM_SENTENCES = int(args[1])
-    #     MODEL_HUB = args[2]
-    #     MODEL_NAME = args[3]
-    
-
     # Place holder: error check if we can't find the file
 
-    # Read in all the text, and get it into a single string, which
-    # we'll call the document
-    # file_to_read = open(PATH_TO_FILE, "r")
-    # lines = []
-    # while True:
-    #     line = file_to_read.readline()
-    #     lines.append(line)
-    #     if not line:
-    #         break
-    # raw_text = "".join(lines)
-    raw_text = PATH_TO_FILE
     # Use stanza to tokenize the document and find all the sentences.
     # Refer to the output of the tokenizer as the "document"
     tokenizer = stanza.Pipeline(
@@ -143,7 +121,7 @@ def cogniflow_core(PATH_TO_FILE, NUM_SENTENCES, MODEL_HUB, MODEL_NAME):
         processors='tokenize',
         verbose=False
     )
-    document = tokenizer(raw_text)
+    document = tokenizer(RAW_TEXT)
 
     # Get the sentences and the number of setnences in the document
     sentences = document.sentences
