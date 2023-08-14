@@ -44,10 +44,28 @@ def main():
     3) Model hub to use. Currently only "OpenAI" or "HuggingFaceHub"
        are supported.
     4) A model name to use. Use "text-davinci-003" for OpenAI and
-       whatever model you want from HuggingFaceHub (e.g. "gpt2")
+       whatever model you want from HuggingFaceHub
+       (e.g. "google/flan-t5-xxl")
     """
+    print("\n\nWelcome to CogniFlow!\n\n"
+          + "I am your friendly reader assistant.\n"
+          + "Since you're running me from the command line, you've\n"
+          + "already supplied me with a text file and the number of\n"
+          + "sentences you want to parse at a time.\n\n"
+          + "I'm going to print a summary of the number of sentences\n"
+          + "you supplied followed by the original text for you to "
+          + "read.\n\n"
+          + "As we go through the text, I'm going to ask you if you\n"
+          + "want to continue. For now, just say anything to keep "
+          + "going\nand write 'q' to quit.\n\n"
+          + "Have fun!\n\nWhen you're ready to go, press any key."
+    )
 
-    # Place holder: error check if they provide more than/less than two 
+    input()
+
+    print("\n\n")
+
+    # Place holder: error check if they provide more than/less than four
     # command line arguments
     
     args = sys.argv[1:]
@@ -98,18 +116,60 @@ def main():
 
     # Sequentially get the next NUM_SENTENCES.
     summaries = []
-    for i in range(
-        0,
-        number_of_sentences_in_document,
-        NUM_SENTENCES
-    ):
-        next_sentences = get_next_sentences(document, i, NUM_SENTENCES)
-        chain = LLMChain(llm=llm, prompt=prompt)
-        summaries.append(chain.run(next_sentences))
-        print("LLM's summary:\n" + summaries[-1])
-        print("\n")
-        print("The actual text:\n" + next_sentences)
-        print("\n\n\n\n")
+
+    # Flag whether to keep going or not
+    keep_going = True
+
+    # Cursor to track what sentence we're at in the text. Start
+    # at the beginning
+    c = 0
+
+    # Specify which chain we want to use
+    chain = LLMChain(llm=llm, prompt=prompt)
+
+    while(keep_going):
+        next_sentences = get_next_sentences(document, c, NUM_SENTENCES)
+        summary = chain.run(next_sentences)
+        print(
+            "The summary of sentences "
+            + str(c)
+            + " to "
+            + str(c + NUM_SENTENCES)
+            + " is:"
+        )
+
+        print(summary + "\n")
+        print("The actual text is:")
+        print(next_sentences + "\n")
+
+        # Advance the cursor by NUM_SENTENCES
+        c += NUM_SENTENCES
+
+        # If we've exceeded the total number of setences, break
+        if c >= number_of_sentences_in_document:
+            break
+
+        keep_going_string = input("Keep going? ")
+        if keep_going_string == "q":
+            keep_going = False
+        print("\n\n")
+
+
+    # Below is just the for-loop implementation without asking for
+    # user input.
+    if False:
+        for i in range(
+            0,
+            number_of_sentences_in_document,
+            NUM_SENTENCES
+        ):
+            next_sentences = get_next_sentences(document, i, NUM_SENTENCES)
+            chain = LLMChain(llm=llm, prompt=prompt)
+            summaries.append(chain.run(next_sentences))
+            print("LLM's summary:\n" + summaries[-1])
+            print("\n")
+            print("The actual text:\n" + next_sentences)
+            print("\n\n\n\n")
 
 if __name__ == "__main__":
     main()
