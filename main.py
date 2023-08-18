@@ -3,17 +3,13 @@ from typing import *
 import stanza
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+from langchain.memory import ConversationBufferMemory
 import dotenv
 from langchain.llms import HuggingFaceHub, OpenAI
+
+
 from src.models.llm_specification_model import LLMSpecification
 from src.services.cogniflow_core import get_next_sentences
-
-# For chatbot
-from langchain.prompts.chat import (
-    ChatPromptTemplate,
-    SystemMessagePromptTemplate,
-    HumanMessagePromptTemplate,
-)
 
 
 def print_sentences_and_tokens(document : stanza.Document) -> None:
@@ -82,83 +78,42 @@ def main():
 
     # PERSONA
     ## Define our reader's persona
-    persona = (
-        "You are a friendly assistant meant to help people with "
-        + "reading. You are attentive to individual's needs and kind. "
-        + "You are trying to help people who may have difficulty "
-        + "reading. "
+    template = (
+        """You are a kind and compassionate assistant. Your main role is
+        to help people read. You are having a conversation with a human.
+        Tell the human that when they are ready to start they can tell
+        you. If the human indicates that they are ready to start
+        output the phrase "Let's go" exactly. Continue the conversation
+        with the human until they tell you they are ready to go.
+        
+        {chat_history}
+        
+        Human: {human_input}
+        Chatbot:"""
     )
 
     # WELCOME
     ## Make a chat prompt for the reader to welcome the user to
     ## CogniFlow
-    
-    system_message_prompt = SystemMessagePromptTemplate.from_template(
-        persona
+    prompt = PromptTemplate(
+        input_variables=["chat_history", "human_input"],
+        template=template
     )
-    human_template = "{text}"
-    human_message_prompt = HumanMessagePromptTemplate.from_template(
-        human_template
-    )
-    chat_prompt = ChatPromptTemplate.from_messages(
-        [
-            system_message_prompt,
-            human_message_prompt
-        ]
-    )
-
+    memory = ConversationBufferMemory(memory_key="chat_history")
     chain = LLMChain(
         llm=llm,
-        prompt=chat_prompt,
-    )
-    welcome_message = chain.run(
-        "Welcome the user to this app called \"CogniFlow\" and tell "
-        + "them that they have already supplied a text file so we're "
-        + "good to go. Make sure to explicitly welcome them to "
-        + "\"CogniFlow\""
+        prompt=prompt,
+        verbose=False,
+        memory=memory,
     )
 
-    print(welcome_message + "\n")
-    # print( "Welcome to CogniFlow!\n"
-    #       + "I am your friendly reader assistant.\n"
-    #       + "Since you're running me from the command line, you've\n"
-    #       + "already supplied me with a text file and the number of\n"
-    #       + "sentences you want to parse at a time.\n\n"
-    #       + "I'm going to print a summary of the number of sentences\n"
-    #       + "you supplied followed by the original text for you to "
-    #       + "read.\n\n"
-    #       + "As we go through the text, I'm going to ask you if you\n"
-    #       + "want to continue. For now, just say anything to keep "
-    #       + "going\nand write 'q' to quit.\n\n"
-    #       + "Have fun!\n\nWhen you're ready to go, press any key."
-    # )
-
-    # PRELIMINARY DISCUSSION
-    ## Have the assistant converse with the user. If the user tells
-    ## them they're ready to go, then begin.
-    conversation_prompt = (
-        "Ask the user about themselves and about their needs. "
-        + "Tell the user that if they are ready to start to let "
-        + "you know. If the user does let you know they are ready to start "
-        + "then make sure to use the words \"Let's begin\" "
-        + "at the end of your response."
-    )
-    chain = LLMChain(
-        llm=llm,
-        prompt=chat_prompt
-    )
-    output = chain.run(conversation_prompt)
-    print(output)
     ready_to_go = False
-    while(not ready_to_go):
-        user_input = input("User: ")
-        print(user_input)
-        output = chain.run(user_input)
-        print(output)
-        if "Let's begin" in output:
+    while not ready_to_go:
+        user_input = input("Human: ")
+        bot_output =  chain.predict(human_input=user_input)
+        print("Bot: " + bot_output)
+        if "Let's go" in bot_output:
             ready_to_go = True
-    print("\n\n")
-    
     
     # Use stanza to tokenize the document and find all the sentences.
     # Refer to the output of the tokenizer as the "document"
