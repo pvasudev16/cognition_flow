@@ -95,14 +95,14 @@ def main():
     # WELCOME
     ## Make a chat prompt for the reader to welcome the user to
     ## CogniFlow
-    prompt = PromptTemplate(
+    chat_prompt = PromptTemplate(
         input_variables=["chat_history", "human_input"],
         template=template
     )
     memory = ConversationBufferMemory(memory_key="chat_history")
-    chain = LLMChain(
+    conversation_chain = LLMChain(
         llm=llm,
-        prompt=prompt,
+        prompt=chat_prompt,
         verbose=False,
         memory=memory,
     )
@@ -110,11 +110,13 @@ def main():
     ready_to_go = False
     while not ready_to_go:
         user_input = input("Human: ")
-        bot_output =  chain.predict(human_input=user_input)
+        bot_output =  conversation_chain.predict(human_input=user_input)
         print("Bot: " + bot_output)
         if "Let's go" in bot_output:
             ready_to_go = True
     
+
+    # DOCUMENT PRE-PROCESSING
     # Use stanza to tokenize the document and find all the sentences.
     # Refer to the output of the tokenizer as the "document"
     tokenizer = stanza.Pipeline(
@@ -128,12 +130,59 @@ def main():
     sentences = document.sentences
     number_of_sentences_in_document = len(sentences)
 
-    # Use the same prompt template to summarize each of the
-    # NUM_SENTENCES. For some reason, langchain doesn't like if you
-    # split the template string over multiple lines
-    prompt = PromptTemplate(
-      input_variables=["text_to_summarize"],
-      template="Can you please summarize the following text in 10 words: {text_to_summarize}?",
+    # DOCUMENT SUMMARIZATION
+    # We have a conversation chat bot prompt template for the
+    # conversation. Use a different bot (?) / prompt to do
+    # the summaries of NUM_SENTENCES. After displaying the summary
+    # and the actual text, the conversation bot will converse with
+    # the user.
+
+    summary_prompt = PromptTemplate(
+        input_variables=[
+            "text_to_summarize",
+            "chat_history"
+        ],
+        template=(
+            """You are a kind and compassionate assistant. Your main
+            role is to help people read. Here is the chat history
+            so far:
+        
+            {chat_history}
+
+            Now please summarize the following text in 10 words:
+        
+            {text_to_summarize}"""
+        )
+    )
+
+    discussion_prompt = PromptTemplate(
+        input_variables=[
+            "most_recent_summary",
+            "summaries",
+            "chat_history"
+        ],
+        template=(
+            """You are a kind and compassionate assistant. Your main role
+            is to help people read. Here is the chat history so far:
+
+            {chat_history}
+            
+            Here is the most recent summary:
+
+            {most_recent_summary}
+
+            and here is a summary of the text so far:
+
+            {summaries}
+
+            Help the user by answering any questions they may have. For
+            example, if they ask you to define a word, define it for
+            them. If the human indicates that they are ready to continue
+            then output the phrase "Let's keep going" exactly. If the
+            human indicates they are ready to quite, output the phrase
+            "Let's stop" exactly.
+            """
+        )
     )
 
     # Sequentially get the next NUM_SENTENCES.
@@ -147,11 +196,25 @@ def main():
     c = 0
 
     # Specify which chain we want to use
-    chain = LLMChain(llm=llm, prompt=prompt)
+    summary_chain = LLMChain(
+        llm=llm,
+        prompt=summary_prompt,
+        memory=memory,
+        verbose=False
+    )
+
+    discussion_chain = LLMChain(
+        llm=llm,
+        prompt=discussion_prompt,
+        memory=memory,
+        verbose=True
+    )
 
     while(keep_going):
         next_sentences = get_next_sentences(document, c, NUM_SENTENCES)
-        summary = chain.run(next_sentences)
+        summary = summary_chain.run(
+            {"text_to_summarize" : next_sentences}
+        )
         print(
             "The summary of sentences "
             + str(c)
@@ -170,10 +233,22 @@ def main():
         # If we've exceeded the total number of setences, break
         if c >= number_of_sentences_in_document:
             break
+        
+        summaries.append(summary)
 
-        keep_going_string = input("Keep going? ")
-        if keep_going_string == "q":
-            keep_going = False
+        continue_conversation = True
+
+        while(continue_conversation):
+            discussion = discussion_chain(
+                inputs={"most_recent_summary" : summary,
+                "summaries" : " ".join(summaries)}
+            )
+            if "Let's keep going" in discussion:
+                continue_conversation=False
+            if "Let's stop" in discussion:
+                continue_conversation=False
+                keep_going=False
+
         print("\n\n")
 
 
