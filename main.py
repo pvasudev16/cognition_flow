@@ -146,6 +146,30 @@ def main():
     # and the actual text, the conversation bot will converse with
     # the user.
 
+    intro_prompt = PromptTemplate(
+        input_variables=[
+            "human_input",
+            "number_of_sentences",
+            "chat_history"
+        ],
+        template=(
+            """Here is the chat history so far:
+            
+            {chat_history}
+            
+            Start by telling the user what you will do.
+            Tell the user you'll display a summary of
+            {number_of_sentences} sentences, followed by the actual text
+            itself. Tell the user they can discuss each summary with
+            you. Tell the user they can indicate to keep going 
+            or to stop. If the user indicates they want to
+            keep going, output "Let's keep going" exactly. If the user
+            indicates they want to stop, output "Let's stop" exactly".
+            
+            {human_input}"""
+        )
+    )
+
     # Note that this prompt does not accept any human_input. We are
     # just 
     summary_prompt = PromptTemplate(
@@ -204,17 +228,39 @@ def main():
         )
     )
 
+    # Make a prompt that will thank the user for using CogniFlow
+    end_prompt = PromptTemplate(
+        input_variables=[
+            "human_input",
+            "chat_history"
+        ],
+        template=(
+            """This is the chat history so far:
+            {chat_history}
+
+            Tell the user that they made it to the end of the text
+            and that they did good work. Thank the user and make sure
+            to use "CogniFlow" in your thanks.
+            
+            {human_input}"""
+        )
+    )
+
     # Sequentially get the next NUM_SENTENCES.
     summaries = []
-
-    # Flag whether to keep going or not
-    keep_going = True
 
     # Cursor to track what sentence we're at in the text. Start
     # at the beginning
     c = 0
 
     # Specify which chain we want to use
+    intro_chain = LLMChain(
+        llm=llm,
+        prompt=intro_prompt,
+        memory=memory,
+        verbose=False
+    )
+
     summary_chain = LLMChain(
         llm=llm,
         prompt=summary_prompt,
@@ -228,6 +274,24 @@ def main():
         memory=memory,
         verbose=False
     )
+
+    end_chain = LLMChain(
+        llm=llm,
+        prompt=end_prompt,
+        memory=memory,
+        verbose=False
+    )
+
+    # Get the bot to tell the user how to use this tool.
+    instruction_output = intro_chain.predict(
+        human_input="",
+        number_of_sentences=NUM_SENTENCES,
+    )
+    print(instruction_output)
+
+    # Flag indicating whether the user is ready to keep going or not
+    # By default, assume they'll do one interation.
+    keep_going = True
 
     while(keep_going):
         next_sentences = get_next_sentences(document, c, NUM_SENTENCES)
@@ -272,23 +336,10 @@ def main():
                 keep_going=False
 
         print("\n\n")
+    
+    end_output = end_chain.predict(human_input="")
+    print(end_output)
 
-
-    # Below is just the for-loop implementation without asking for
-    # user input.
-    if False:
-        for i in range(
-            0,
-            number_of_sentences_in_document,
-            NUM_SENTENCES
-        ):
-            next_sentences = get_next_sentences(document, i, NUM_SENTENCES)
-            chain = LLMChain(llm=llm, prompt=prompt)
-            summaries.append(chain.run(next_sentences))
-            print("LLM's summary:\n" + summaries[-1])
-            print("\n")
-            print("The actual text:\n" + next_sentences)
-            print("\n\n\n\n")
 
 if __name__ == "__main__":
     main()
