@@ -76,6 +76,15 @@ def main():
     # or HuggingFaceHub.
     llm = LLMSpecification(MODEL_HUB, MODEL_NAME).get_llm()
 
+    # Define memory.
+    # Every prompt will need a "human_input" input, even if it's 
+    # not actually the human inputting it. E.g. it might be
+    # NUM_SENTENCES of the document we've parsed
+    memory=ConversationBufferMemory(
+        memory_key="chat_history",
+        input_key="human_input"
+    )
+
     # PERSONA
     ## Define our reader's persona
     template = (
@@ -99,19 +108,19 @@ def main():
         input_variables=["chat_history", "human_input"],
         template=template
     )
-    memory = ConversationBufferMemory(memory_key="chat_history")
+
     conversation_chain = LLMChain(
         llm=llm,
         prompt=chat_prompt,
         verbose=False,
-        memory=memory,
+        memory=memory
     )
 
     ready_to_go = False
     while not ready_to_go:
         user_input = input("Human: ")
         bot_output =  conversation_chain.predict(human_input=user_input)
-        print("Bot: " + bot_output)
+        print("Chatbot: " + bot_output)
         if "Let's go" in bot_output:
             ready_to_go = True
     
@@ -132,15 +141,18 @@ def main():
 
     # DOCUMENT SUMMARIZATION
     # We have a conversation chat bot prompt template for the
-    # conversation. Use a different bot (?) / prompt to do
+    # conversation. Use a different prompt to do
     # the summaries of NUM_SENTENCES. After displaying the summary
     # and the actual text, the conversation bot will converse with
     # the user.
 
+    # Note that this prompt does not accept any human_input. We are
+    # just 
     summary_prompt = PromptTemplate(
         input_variables=[
-            "text_to_summarize",
-            "chat_history"
+            "human_input", # human_input is actually the text we
+                           # want to summarize
+            "chat_history",
         ],
         template=(
             """You are a kind and compassionate assistant. Your main
@@ -151,12 +163,16 @@ def main():
 
             Now please summarize the following text in 10 words:
         
-            {text_to_summarize}"""
+            {human_input}
+            """
         )
     )
 
+    # Make a prompt that will be used to discuss each of the summaries.
+    # It needs a human_input as a prompt for the chat.
     discussion_prompt = PromptTemplate(
         input_variables=[
+            "human_input",
             "most_recent_summary",
             "summaries",
             "chat_history"
@@ -181,6 +197,9 @@ def main():
             then output the phrase "Let's keep going" exactly. If the
             human indicates they are ready to quite, output the phrase
             "Let's stop" exactly.
+
+            Human: {human_input}
+            Chatbot:
             """
         )
     )
@@ -207,13 +226,13 @@ def main():
         llm=llm,
         prompt=discussion_prompt,
         memory=memory,
-        verbose=True
+        verbose=False
     )
 
     while(keep_going):
         next_sentences = get_next_sentences(document, c, NUM_SENTENCES)
         summary = summary_chain.run(
-            {"text_to_summarize" : next_sentences}
+            {"human_input" : next_sentences}
         )
         print(
             "The summary of sentences "
@@ -239,13 +258,16 @@ def main():
         continue_conversation = True
 
         while(continue_conversation):
-            discussion = discussion_chain(
-                inputs={"most_recent_summary" : summary,
-                "summaries" : " ".join(summaries)}
+            user_input = input("Human: ")
+            discussion_output = discussion_chain.predict(
+                human_input=user_input,
+                most_recent_summary=summary,
+                summaries=" ".join(summaries),
             )
-            if "Let's keep going" in discussion:
+            print("Chatbot: " + discussion_output)
+            if "Let's keep going" in discussion_output:
                 continue_conversation=False
-            if "Let's stop" in discussion:
+            if "Let's stop" in discussion_output:
                 continue_conversation=False
                 keep_going=False
 
