@@ -90,8 +90,10 @@ def main():
     persona = (
         """
         You are a kind and compassionate assistant. Your main
-        role is to help people read. You use shorter sentences.
-        You are having a conversation with a human.
+        role is to help people read. You use short sentences.
+        You are having a conversation with a human. When you respond,
+        you keep your answers to 10 - 15 words and you use simple
+        vocabulary.
         """
     )
 
@@ -121,7 +123,7 @@ def main():
 
             {human_input}
 
-            Chatbot:  
+            YOUR RESPONSE:
             """
         )
     )
@@ -138,7 +140,7 @@ def main():
         human_input=""
     )
 
-    print(welcome)
+    print(welcome.strip())
 
     # INTRODUCTORY CONVERSATION
     ## This is the converation after the bot has welcomed the user
@@ -164,7 +166,7 @@ def main():
             {chat_history}
             
             Human: {human_input}
-            Chatbot:"""
+            YOUR RESPONSE:"""
         )
     )
 
@@ -182,9 +184,10 @@ def main():
             human_input=user_input,
             persona=persona
         )
-        print("Chatbot: " + bot_output)
         if "Let's go" in bot_output:
             ready_to_go = True
+            break
+        print("Chatbot: " + bot_output.strip())
     
 
     # DOCUMENT PRE-PROCESSING
@@ -232,18 +235,13 @@ def main():
             Start by telling the user what you will do.
             Tell the user you'll display a summary of
             {number_of_sentences} sentences, followed by the actual text
-            itself. Tell the user they can discuss each summary with
-            you. Tell the user they can indicate to keep going 
-            or to stop. If the user indicates they want to
-            keep going, output "Let's keep going" exactly. If the user
-            indicates they want to stop, output "Let's stop" exactly".
-            You are starting this new part of the conversation, so the
-            human will respond to what you say. Ask the user if they
-            are ready.
+            itself. Tell the user they will be able to discuss each
+            summary with you. Tell the user they will be able to ask you
+            to keep going or to stop
             
             {human_input}
 
-            Chatbot:
+            YOUR RESPONSE:
             """
         )
     )
@@ -258,9 +256,10 @@ def main():
         persona=persona,
         number_of_sentences=NUM_SENTENCES,
     )
-    print("Chatbot: " + instruction_output)
+    print("Chatbot: " + instruction_output.strip())
 
     human_input = input("Human: ")
+
     check_if_ready_prompt = PromptTemplate(
         input_variables=[
             "human_input",
@@ -274,10 +273,12 @@ def main():
             Here is the chat history so far:
             {chat_history}
 
-            If {human_input} indicates that they are ready, output
-            the number 1 exactly. If {human_input} indicates that the
-            human is not ready output "That's ok, let me know when
-            you're ready" exactly.
+            If "{human_input}" indicates that they are ready, output
+            "Let's go" exactly. Follow this instruction exactly.
+            If not, tell the human it's ok and ask if they have any
+            other questions.
+
+            YOUR RESPONSE:
             """
         )
     )
@@ -291,24 +292,29 @@ def main():
         persona=persona,
         human_input=human_input,
     )
-    print("Debugging: " + check_if_ready)
 
     ready_to_go = False
 
-    if "1" in check_if_ready:
+    if "Let's go" in check_if_ready:
         ready_to_go = True
+
+
     while not ready_to_go:
-        print("Chatbot: " + check_if_ready)
-        human_input = input("Human input: ")
+        print(
+            "DEBUGGING: Chatbot: "
+            + check_if_ready
+        )
+        print("Chatbot: " + check_if_ready.strip())
+        human_input = input("Human: ")
         check_if_ready = check_if_ready_chain.predict(
             persona=persona,
             human_input=human_input,
         )
-        if "1" in check_if_ready:
+        if "Let's go" in check_if_ready:
             ready_to_go = True
+            break
+        print("Chatbot: " + check_if_ready.strip())
 
-
-    ready_to_go = False
     # SUMMARIZATION (PREPARATION)
     ## Prepare the prompts and chains we'll need to do
     ## the summarization.
@@ -334,7 +340,7 @@ def main():
         
             {human_input}
 
-            Chatbot:
+            YOUR RESPONSE:
             """
         )
     )
@@ -371,15 +377,18 @@ def main():
 
             {summaries}
 
-            Help the user by answering any questions they may have. For
+            Help the human by answering any questions they may have. For
             example, if they ask you to define a word, define it for
-            them. If the human indicates that they are ready to continue
-            then output the phrase "Let's keep going" exactly. If the
-            human indicates they are ready to quit, output the phrase
-            "Let's stop" exactly.
+            them. If they ask you questions about the summary, answer
+            them.
+
+            If the human indicates that they want to continue onto
+            the next set of sentences then output only "Let's keep
+            going" exactly. If the human indicates they are ready to
+            quit, output the phrase "Let's stop" exactly.
 
             Human: {human_input}
-            Chatbot:
+            YOUR RESPONSE:
             """
         )
     )
@@ -412,7 +421,7 @@ def main():
             + " is:"
         )
 
-        print(summary + "\n")
+        print(summary.strip() + "\n")
         print("The actual text is:")
         print(next_sentences + "\n")
 
@@ -421,7 +430,7 @@ def main():
 
         # If we've exceeded the total number of setences, break
         if c >= number_of_sentences_in_document:
-            break
+            keep_going = False
         
         summaries.append(summary)
 
@@ -463,7 +472,7 @@ def main():
             
             {human_input}
             
-            Chatbot:"""
+            YOUR RESPONSE:"""
         )
     )
     end_chain = LLMChain(
@@ -473,7 +482,7 @@ def main():
         verbose=False
     )
     end_output = end_chain.predict(human_input="")
-    print(end_output)
+    print("Chatbot: " + end_output.strip())
 
 
 if __name__ == "__main__":
