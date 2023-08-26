@@ -4,36 +4,27 @@ import stanza
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
-import dotenv
-from langchain.llms import HuggingFaceHub, OpenAI
 
-
+# Import our utilities
 from src.models.llm_specification_model import LLMSpecification
-from src.services.cogniflow_core import get_next_sentences
+from src.services.cogniflow_core import (
+    get_next_sentences,
+    # print_sentences_and_tokens,
+    # print_sentences
+)
 
+# Import input processing packages
+from urllib.parse import urlparse
+from os.path import exists
+import html2text
+import requests
 
-def print_sentences_and_tokens(document : stanza.Document) -> None:
-      """
-      Utility function for debugging.
-      This function prints out the token id and the text associated
-      with each token id for each sentence int he stanza document
-      """
-      for i, sentence in enumerate(document.sentences):
-        print(f'====== Sentence {i+1} tokens =======')
-        print(
-            *[
-                f'id: {token.id}\ttext: {token.text}'
-                for token in sentence.tokens
-              ],
-            sep='\n'
-        )
+def is_local(url):
+    url_parsed = urlparse(url)
+    if url_parsed.scheme in ('file', ''): # Possibly a local file
+        return exists(url_parsed.path)
+    return False
 
-def print_sentences(document : stanza.Document) -> None:
-    """
-    Utility function to print out the sentences in a stanza document
-    """
-    for s in document.sentences:
-        print(s.text + " ")
         
 def main():
     """
@@ -41,36 +32,65 @@ def main():
     segments of number_of_sentences sentences.
 
     Command line arguments should be:
-    1) Path to a text file, called path_to_text (e.g. ./elephants.txt)
+    1) Path to a text file or URL, called path_to_text
+        (e.g. ./elephants.txt,
+              ./elon_musk.txt,
+              https://www.theguardian.com/football/2023/aug/26/brentford-crystal-palace-premier-league-match-report
+        )
     2) Number of sentences to summarise at at time, called 
-       number_of_setneces (e.g. 5)
+       number_of_sentences (e.g. 5)
     3) Model hub to use. Currently only "OpenAI" or "HuggingFaceHub"
        are supported.
     4) A model name to use. Use "text-davinci-003" for OpenAI and
        whatever model you want from HuggingFaceHub
        (e.g. "google/flan-t5-xxl")
     """
-    # Place holder: error check if they provide more than/less than four
-    # command line arguments
+
     args = sys.argv[1:]
+
+    if len(args) != 4:
+        raise Exception(
+            "Please provide exactly four command line arguments:\n"
+            + "1) The path to the file or URL,\n"
+            + "2) The number of sentences to summarise at a time,\n"
+            + "3) A model hub. Currently only OpenAI or HuggingFaceHub "
+            +     "are supported.\n"
+            + "4) A model name to use, e.g. text-davinci-003 for an\n"
+            + "   OpenAI model hub or google/flan-t5-xxl for a\n"
+            + "   HuggingFaceHub model hub."
+        )
     if len(args) == 4:
         PATH_TO_FILE = args[0]
         NUM_SENTENCES = int(args[1])
         MODEL_HUB = args[2]
         MODEL_NAME = args[3]
 
-    # Place holder: error check if we can't find the file
+    # INPUT PARSING
+    # Find out if this is a local file or not.
+    local = is_local(PATH_TO_FILE)
 
-    # Read in all the text, and get it into a single string, which
-    # we'll call the document
-    file_to_read = open(PATH_TO_FILE, "r")
-    lines = []
-    while True:
-        line = file_to_read.readline()
-        lines.append(line)
-        if not line:
-            break
-    raw_text = "".join(lines)
+    if local:
+        # Read in all the text, and get it into a single string, which
+        # we'll call the document
+        file_to_read = open(PATH_TO_FILE, "r")
+        lines = []
+        while True:
+            line = file_to_read.readline()
+            lines.append(line)
+            if not line:
+                break
+        text = "".join(lines)
+
+        # If this is an HTML file, parse it. If it's just a regular
+        # text file, then this step has no effect.
+        raw_text = html2text.html2text(text)
+    else:
+        # If this is a URL, then we need to get it
+        html = requests.get(PATH_TO_FILE).text
+        raw_text = html2text.html2text(html)
+
+    # If we've loaded up an HTML file, we'll need the
+    
 
     # Define which LLM we want to use. Right now, limit it to OpenAI
     # or HuggingFaceHub.
