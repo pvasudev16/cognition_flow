@@ -18,7 +18,9 @@ python3 main.py ./elephants_short.txt 4 HuggingFaceHub google/flan-t5-xxl
 ```
 
 Positional arguments are:
-1. Path to the file containing text to Cognition Flow
+1. Path to local file containing text to Cognition Flow or a URL to a
+   website. Local files cannot be HTML files and must be plain text
+   files.
 2. The number of sentences to be displayed and summarized
 3. Either "OpenAI" or "HuggingFaceHub" specifying where to look for the LLM.
    This is the so-called model hub.

@@ -14,18 +14,36 @@ from src.services.cogniflow_core import (
 )
 
 # Import input processing packages
+from bs4 import BeautifulSoup
+from bs4.element import Comment
+import urllib.request
 from urllib.parse import urlparse
 from os.path import exists
-import html2text
-import requests
 
+# Find out if a file is local or not
+# https://stackoverflow.com/questions/68626097/pythonic-way-to-identify-a-local-file-or-a-url
 def is_local(url):
     url_parsed = urlparse(url)
     if url_parsed.scheme in ('file', ''): # Possibly a local file
         return exists(url_parsed.path)
     return False
 
-        
+# Scraping functions. Taken verbatim from
+# https://stackoverflow.com/questions/1936466/how-to-scrape-only-visible-webpage-text-with-beautifulsoup
+def tag_visible(element):
+    if element.parent.name in ['style', 'script', 'head', 'title', 'meta', '[document]']:
+        return False
+    if isinstance(element, Comment):
+        return False
+    return True
+
+def text_from_html(url):
+    html = urllib.request.urlopen(url).read()
+    soup = BeautifulSoup(html, 'html.parser')
+    texts = soup.findAll(string=True)
+    visible_texts = filter(tag_visible, texts)  
+    return u" ".join(t.strip() for t in visible_texts)
+
 def main():
     """
     Read in a text and display a summary and the actual text in
@@ -36,7 +54,10 @@ def main():
         (e.g. ./elephants.txt,
               ./elon_musk.txt,
               https://www.theguardian.com/football/2023/aug/26/brentford-crystal-palace-premier-league-match-report
-        )
+        ). If it's a URL, the program will scrape the text but then
+        ask the user to identify the first/last four words of the
+        text. This will prevent CogniFlow from displaying all the other
+        useless stuff on websites.
     2) Number of sentences to summarise at at time, called 
        number_of_sentences (e.g. 5)
     3) Model hub to use. Currently only "OpenAI" or "HuggingFaceHub"
@@ -71,7 +92,8 @@ def main():
 
     if local:
         # Read in all the text, and get it into a single string, which
-        # we'll call the document
+        # we'll call the raw_text. Note that we assume local files
+        # are only plain text files; no HTML.
         file_to_read = open(PATH_TO_FILE, "r")
         lines = []
         while True:
@@ -79,18 +101,31 @@ def main():
             lines.append(line)
             if not line:
                 break
-        text = "".join(lines)
+        raw_text = "".join(lines)
 
-        # If this is an HTML file, parse it. If it's just a regular
-        # text file, then this step has no effect.
-        raw_text = html2text.html2text(text)
+        # TO DO: Check if file suffix is htm or html and parse local
+        # HTML
     else:
         # If this is a URL, then we need to get it
-        html = requests.get(PATH_TO_FILE).text
-        raw_text = html2text.html2text(html)
+        raw_text = text_from_html(PATH_TO_FILE)
 
-    # If we've loaded up an HTML file, we'll need the
-    
+        # Ask the user for help. Ask them if they can identify the
+        # first/last four words in the article
+        first_four_words = input(
+            "Thanks for giving me a URL that we can read together."
+            + "To read a URL, I need a bit of help from you. Can you "
+            + "tell me what the first four words of the article are? "
+            + "Please write them exactly here.\n"""
+        )
+        last_four_words = input(
+            "Thanks! And I need one last thing from you. Can you "
+            + "provide me with the last four words of the article?\n"
+        )
+        starting_pos = raw_text.find(first_four_words)
+        ending_pos = raw_text.find(last_four_words)
+        raw_text = raw_text[
+            starting_pos:(ending_pos + len(last_four_words))
+        ]
 
     # Define which LLM we want to use. Right now, limit it to OpenAI
     # or HuggingFaceHub.
