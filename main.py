@@ -112,17 +112,30 @@ def main():
         # Ask the user for help. Ask them if they can identify the
         # first/last four words in the article
         first_four_words = input(
-            "Thanks for giving me a URL that we can read together."
+            "Thanks for giving me a URL that we can read together. "
             + "To read a URL, I need a bit of help from you. Can you "
             + "tell me what the first four words of the article are? "
             + "Please write them exactly here.\n"""
         )
+        starting_pos = raw_text.find(first_four_words)
+        while starting_pos == -1:
+            first_four_words = input(
+                "Oops, I couldn't find that in the article! Please "
+                + "input the first four words of the article exactly!\n"
+            )
+            starting_pos = raw_text.find(first_four_words)
+        
         last_four_words = input(
             "Thanks! And I need one last thing from you. Can you "
             + "provide me with the last four words of the article?\n"
         )
-        starting_pos = raw_text.find(first_four_words)
         ending_pos = raw_text.find(last_four_words)
+        while ending_pos == -1:
+            last_four_words = input(
+                "Oops, I couldn't find that in the article! Please "
+                + "input the last four words of the article exactly!\n"
+            )
+            ending_pos = raw_text.find(last_four_words)
         raw_text = raw_text[
             starting_pos:(ending_pos + len(last_four_words))
         ]
