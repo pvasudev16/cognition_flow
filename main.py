@@ -5,44 +5,8 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 
-# Import our utilities
-from src.models.llm_specification_model import LLMSpecification
-from src.services.cogniflow_core import (
-    get_next_sentences,
-    # print_sentences_and_tokens,
-    # print_sentences
-)
+from src.util import *
 
-# Import input processing packages
-from bs4 import BeautifulSoup
-from bs4.element import Comment
-import urllib.request
-from urllib.parse import urlparse
-from os.path import exists
-
-# Find out if a file is local or not
-# https://stackoverflow.com/questions/68626097/pythonic-way-to-identify-a-local-file-or-a-url
-def is_local(url):
-    url_parsed = urlparse(url)
-    if url_parsed.scheme in ('file', ''): # Possibly a local file
-        return exists(url_parsed.path)
-    return False
-
-# Scraping functions. Taken verbatim from
-# https://stackoverflow.com/questions/1936466/how-to-scrape-only-visible-webpage-text-with-beautifulsoup
-def tag_visible(element):
-    if element.parent.name in ['style', 'script', 'head', 'title', 'meta', '[document]']:
-        return False
-    if isinstance(element, Comment):
-        return False
-    return True
-
-def text_from_html(url):
-    html = urllib.request.urlopen(url).read()
-    soup = BeautifulSoup(html, 'html.parser')
-    texts = soup.findAll(string=True)
-    visible_texts = filter(tag_visible, texts)  
-    return u" ".join(t.strip() for t in visible_texts)
 
 def main():
     """
@@ -102,49 +66,39 @@ def main():
             if not line:
                 break
         raw_text = "".join(lines)
-
-        # TO DO: Check if file suffix is htm or html and parse local
-        # HTML
     else:
         # If this is a URL, then we need to get it
         raw_text = text_from_html(PATH_TO_FILE)
 
-        # Ask the user for help. Ask them if they can identify the
-        # first/last four words in the article
-        first_four_words = input(
-            "Thanks for giving me a URL that we can read together. "
-            + "To read a URL, I need a bit of help from you. Can you "
-            + "tell me what the first four words of the article are? "
-            + "Please write them exactly here.\n"""
-        )
-        starting_pos = raw_text.find(first_four_words)
-        while starting_pos == -1:
-            first_four_words = input(
-                "Oops, I couldn't find that in the article! Please "
-                + "input the first four words of the article exactly!\n"
-            )
-            starting_pos = raw_text.find(first_four_words)
-        
-        last_four_words = input(
-            "Thanks! And I need one last thing from you. Can you "
-            + "provide me with the last four words of the article?\n"
-        )
-        ending_pos = raw_text.find(last_four_words)
-        while ending_pos == -1:
-            last_four_words = input(
-                "Oops, I couldn't find that in the article! Please "
-                + "input the last four words of the article exactly!\n"
-            )
-            ending_pos = raw_text.find(last_four_words)
-        raw_text = raw_text[
-            starting_pos:(ending_pos + len(last_four_words))
-        ]
+    # EMBEDDINGS, SEMANTIC MEANING, AND VECTOR DATABASE RETRIEVAL
+    # Let's get the LLM to read the document and get the "semantic
+    # meaning" of the text so the user can ask questions during the
+    # reading.
 
-    # Define which LLM we want to use. Right now, limit it to OpenAI
-    # or HuggingFaceHub.
+    # Get the LLM and embeddings based on the user inputs.
     llm = LLMSpecification(MODEL_HUB, MODEL_NAME).get_llm()
+    embeddings = LLMEmbeddings(MODEL_HUB, MODEL_NAME).get_embeddings()
 
-    # Define memory.
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=20
+    )
+    # We need to convert the text into a LangChain document
+    document = text_splitter.create_documents([raw_text])
+    chunked_raw_text = text_splitter.split_documents(document)
+    embedding_list = embeddings.embed_documents(
+        [t.page_content for t in chunked_raw_text]
+    )
+
+    # Store our embedding list in a searchable vector database
+    db = FAISS.from_documents(chunked_raw_text, embeddings)
+
+    # Get a retriever which will retrieve the 10 closest results
+    # to a query
+    retriever = db.as_retriever(search_kwargs={"k" : 10})
+
+    
+    # MEMORY
     # Every prompt will need a "human_input" input, even if it's 
     # not actually the human inputting it. E.g. it might be
     # NUM_SENTENCES of the document we've parsed
@@ -259,6 +213,13 @@ def main():
     
 
     # DOCUMENT PRE-PROCESSING
+    #
+    # Start by obtaining the main text f we are reading a remote source.
+    # Not ideal, but ask the user for some help in finding the start
+    # and end of the text
+    if not local:
+        raw_text = get_start_and_end_points(raw_text)
+    
     # Use stanza to tokenize the document and find all the sentences.
     # Refer to the output of the tokenizer as the "document"
     tokenizer = stanza.Pipeline(
