@@ -381,14 +381,16 @@ def main():
     )
 
     # Make a prompt that will be used to discuss each of the summaries.
-    # It needs a human_input as a prompt for the chat.
+    # It needs a human_input as a prompt for the chat. Also pass in
+    # the documents in case it needs to answer a question.
     discussion_prompt = PromptTemplate(
         input_variables=[
             "human_input",
             "persona",
             "most_recent_summary",
             "summaries",
-            "chat_history"
+            "chat_history",
+            "documents"
         ],
         template=(
             """
@@ -416,6 +418,10 @@ def main():
             going" exactly. If the human indicates they are ready to
             quit, output the phrase "Let's stop" exactly.
 
+            Here are the most relevant parts of the text to answer
+            the user's query:
+            {documents}
+
             Human: {human_input}
             YOUR RESPONSE:
             """
@@ -425,7 +431,7 @@ def main():
         llm=llm,
         prompt=discussion_prompt,
         memory=memory,
-        verbose=False
+        verbose=False,
     )
 
     # SUMMARIZATION CONVERSATION LOOP
@@ -472,6 +478,7 @@ def main():
                 persona=persona,
                 most_recent_summary=summary,
                 summaries=" ".join(summaries),
+                documents=retriever.get_relevant_documents(user_input)
             )
             print("Chatbot: " + discussion_output)
             if "Let's keep going" in discussion_output:
