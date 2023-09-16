@@ -15,7 +15,6 @@ from os.path import exists
 
 # Import packages for chunking text and creating embeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
 from langchain.embeddings import (
     OpenAIEmbeddings,
     HuggingFaceHubEmbeddings
@@ -125,6 +124,14 @@ def is_local(url):
         return exists(url_parsed.path)
     return False
 
+# Find out if a file is a pdf or not
+def is_pdf(filename):
+    split_filename = filename.split(".")
+    if split_filename[-1] == "pdf":
+        return True
+    else:
+        return False
+
 # Scraping functions. Taken verbatim from
 # https://stackoverflow.com/questions/1936466/how-to-scrape-only-visible-webpage-text-with-beautifulsoup
 def tag_visible(element):
@@ -225,4 +232,3 @@ class LLMEmbeddings:
     
     def get_model_hub(self):
         return self.model_hub
-        

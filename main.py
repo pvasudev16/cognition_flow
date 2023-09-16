@@ -4,9 +4,15 @@ import stanza
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
+from langchain.vectorstores import FAISS
 
 from src.util import *
 
+# For loading PDFs
+from langchain.document_loaders import (
+  UnstructuredPDFLoader,
+  OnlinePDFLoader
+)
 
 def main():
     """
@@ -86,9 +92,6 @@ def main():
     # We need to convert the text into a LangChain document
     document = text_splitter.create_documents([raw_text])
     chunked_raw_text = text_splitter.split_documents(document)
-    embedding_list = embeddings.embed_documents(
-        [t.page_content for t in chunked_raw_text]
-    )
 
     # Store our embedding list in a searchable vector database
     db = FAISS.from_documents(chunked_raw_text, embeddings)
@@ -523,3 +526,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # [nltk_data] Downloading package punkt to /Users/pvasudev/nltk_data...
