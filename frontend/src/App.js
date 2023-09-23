@@ -17,25 +17,38 @@ class Form extends React.Component {
     const formData = new FormData(form);
 
     // Pass formData as a fetch body directly
-    fetch('http://127.0.0.1:5000/', {
-      headers: {
-        Accept: 'application/json',
-      }, method: form.method, body: formData
-    })
-      .then(function (response) {
-        return response.json();
-      })
-      .then(data =>
-        this.setState({
-          summary: data
-        }));
-  };
+    axios.post('http://127.0.0.1:5000/', formData).then(function (response) {
+              console.log(response)
+              return response.data;
+          })
+          .then(data =>
+            this.setState({
+              summary: data
+            }));
+          }
+  //   fetch('http://127.0.0.1:5000/', { // fetch("http://127.0.0.1:5000/test")
+  //     headers: {
+  //       Accept: 'application/json',
+  //     }, method: form.method, body: formData
+  //   })
+  //     .then(function (response) {
+  //       return response.json();
+  //     })
+  //     .then(data =>
+  //       this.setState({
+  //         summary: data
+  //       }));
+  // };
+
+  // Use an array-map a method in every array in javascript
+  // iterates thru the array. use a map method on every element.
+  // 
 
   render() {
     return (
       <div className="App">
         <header className="App-header">
-          <form method="post" onSubmit={this.handleSubmit}>{
+          <form onSubmit={this.handleSubmit}>{ // method="post"
             <label>
               Input the number of sentences you wish to summarize at
               a time
@@ -54,9 +67,9 @@ class Form extends React.Component {
             </label>
             <hr />
             <button type="submit">Get Summary</button>
+            {/* <button type="submit">Get Summary</button> */}
           </form>
           <p>Your summary is: {this.state.summary['summary']}</p>
-          <img src={logo} className="App-logo" alt="logo" />
           <p>Cognition Flow</p>
         </header>
       </div>

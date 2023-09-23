@@ -5,6 +5,14 @@ import json
 import requests
 import dotenv
 
+class TestApiHandler(Resource):
+  def get(self):
+    return {
+      'result_status' : "Hi there",
+      'goobledeegoo' : "ajdfl"
+    }
+    
+
 
 
 class CognitionFlowApiHandler(Resource):
