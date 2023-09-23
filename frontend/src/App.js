@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios'
 
 const App = () => {
-
+  const [userInput, setUserInput] = useState("")
   const [summary, setSummary] = useState("")
   console.log(summary)
   const handleSubmit = async (e) => {
@@ -16,6 +16,7 @@ const App = () => {
 
     // Pass formData as a fetch body directly
     // axios.post('http://127.0.0.1:5000/', formData).then(response => setSummary(response.data.summary))
+    setUserInput("")
     const response = await axios.post('http://127.0.0.1:5000/', formData)
     setSummary(response.data.summary)
   }
@@ -26,7 +27,7 @@ const App = () => {
               <label>
                 Input the number of sentences you wish to summarize at
                 a time
-                <input name="numSentences" defaultValue=""/>
+                <input name="numSentences" onChange={(e)=>setUserInput(e.target.value)} value={userInput}/>
               </label>
             }
             <br></br>
