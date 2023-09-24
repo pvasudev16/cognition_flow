@@ -10,4 +10,3 @@ CORS(app) #comment this on deployment
 api = Api(app)
 
 api.add_resource(CognitionFlowApiHandler, '/')
-api.add_resource(TestApiHandler, '/test')

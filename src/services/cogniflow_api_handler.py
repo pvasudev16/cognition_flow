@@ -5,16 +5,6 @@ import json
 import requests
 import dotenv
 
-class TestApiHandler(Resource):
-  def get(self):
-    return {
-      'result_status' : "Hi there",
-      'goobledeegoo' : "ajdfl"
-    }
-    
-
-
-
 class CognitionFlowApiHandler(Resource):
   def query(self, payload):
     environment_values = dotenv.dotenv_values()
@@ -25,13 +15,19 @@ class CognitionFlowApiHandler(Resource):
     response = requests.request("POST", API_URL, headers=headers, data=data)
     return json.loads(response.content.decode("utf-8"))
   
-  def get(self):
+  def get(self): # get(self, message_id=5), use get to get the 6th message in the history
+    # get is more to look at the history or a db that exists and get
+    # something from it
     return {
       'resultStatus': 'SUCCESS',
       'message': "Cognition Flow Api Handler"
       }
 
-  def post(self):
+  def post(self): # post(self, response_text)
+    # post means send the user input to chatbot AND get the chatbot's
+    # response
+    # include a conversation status key in the post input/output to
+    # know where we are in the conversation.
     parser = reqparse.RequestParser()
     parser.add_argument('postContent', type=str, location='form')
     parser.add_argument('numSentences', type=int, location='form')
