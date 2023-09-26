@@ -3,158 +3,126 @@ from typing import *
 import stanza
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-import dotenv
-from langchain.llms import HuggingFaceHub, OpenAI
+from langchain.memory import ConversationBufferMemory
 
+from src.util import *
 
-def print_sentences_and_tokens(document : stanza.Document) -> None:
-      """
-      Utility function for debugging.
-      This function prints out the token id and the text associated
-      with each token id for each sentence int he stanza document
-      """
-      for i, sentence in enumerate(document.sentences):
-        print(f'====== Sentence {i+1} tokens =======')
-        print(
-            *[
-                f'id: {token.id}\ttext: {token.text}'
-                for token in sentence.tokens
-              ],
-            sep='\n'
-        )
-
-def print_sentences(document : stanza.Document) -> None:
-    """
-    Utility function to print out the sentences in a stanza document
-    """
-    for s in document.sentences:
-        print(s.text + " ")
-
-def get_next_sentences(
-    document : stanza.Document,
-    starting_position : int,
-    number_of_sentences : int
+def preprocessing(
+    NUM_SENTENCES,
+    PATH_TO_FILE,
+    MODEL_HUB,
+    MODEL_NAME
 ):
-    sentences = ""
-    for j in range(number_of_sentences):
-        if starting_position + j >= len(document.sentences):
-            break
-        sentences += document.sentences[starting_position + j].text
-        sentences += " "
-    return sentences
+    # INPUT PARSING
+    # Find out if this is a local file or not.
+    local = is_local(PATH_TO_FILE)
 
-class LLMSpecification:
-    def __init__(self, model_hub, model_name):
-      self.model_hub = model_hub
-      self.model_name = model_name
-      
-      # Place holder: throw an error if there is no .env file
-
-      dotenv.load_dotenv()
-      environment_values = dotenv.dotenv_values()
-
-      if model_hub == "OpenAI":
-          try:
-              assert environment_values["OPEN_AI_KEY"]
-          except:
-              print(
-                "You must supply your OpenAI API key in the .env file "
-                + "as:\nOPEN_AI_KEY=sk_[your key]"
-              )
-          self.llm = OpenAI(
-              model=model_name,
-              openai_api_key=environment_values["OPEN_AI_KEY"],
-              temperature=0.9,
-              client="",
-          )
-
-      elif model_hub == "HuggingFaceHub":
-          try:
-              assert environment_values["HUGGINGFACEHUB_API_TOKEN"]
-          except:
-              print(
-                "You must supply your HuggingFaceHub API key in the "
-                + ".env file as:\nHUGGINFACEHUB_API_TOKEN=hf_[your key]"
-              )
-          self.llm = HuggingFaceHub(
-              huggingfacehub_api_token=(
-                environment_values["HUGGINGFACEHUB_API_TOKEN"]
-              ),
-              repo_id=model_name,
-              client=None,
-          )
-
-      else:
-          raise Exception("Model hub must be OpenAI or HuggingFaceHub")
-      
-    def get_llm(self):
-        return self.llm
-
-    def get_model_name(self):
-        return self.model_name
+    if local:
+        # Read in all the text, and get it into a single string, which
+        # we'll call the raw_text. Note that we assume local files
+        # are only plain text files; no HTML.
+        file_to_read = open(PATH_TO_FILE, "r")
+        lines = []
+        while True:
+            line = file_to_read.readline()
+            lines.append(line)
+            if not line:
+                break
+        raw_text = "".join(lines)
+    else:
+        # If this is a URL, then we need to get it
+        raw_text = text_from_html(PATH_TO_FILE)
     
-    def get_model_hub(self):
-        return self.model_hub
+    # EMBEDDINGS, SEMANTIC MEANING, AND VECTOR DATABASE RETRIEVAL
+    # Let's get the LLM to read the document and get the "semantic
+    # meaning" of the text so the user can ask questions during the
+    # reading.
 
-
-def cogniflow_core(RAW_TEXT, NUM_SENTENCES, MODEL_HUB, MODEL_NAME):
-    """
-    Read in a text and display a summary and the actual text in
-    segments of number_of_sentences sentences.
-
-    Command line arguments should be:
-    1) Path to a text file, called path_to_text (e.g. ./elephants.txt)
-    2) Number of sentences to summarise at at time, called 
-       number_of_setneces (e.g. 5)
-    3) Model hub to use. Currently only "OpenAI" or "HuggingFaceHub"
-       are supported.
-    4) A model name to use. Use "text-davinci-003" for OpenAI and
-       whatever model you want from HuggingFaceHub (e.g. "gpt2")
-    """
-
-    # Place holder: error check if we can't find the file
-
-    # Use stanza to tokenize the document and find all the sentences.
-    # Refer to the output of the tokenizer as the "document"
-    tokenizer = stanza.Pipeline(
-        lang='en',
-        processors='tokenize',
-        verbose=False
-    )
-    document = tokenizer(RAW_TEXT)
-
-    # Get the sentences and the number of setnences in the document
-    sentences = document.sentences
-    number_of_sentences_in_document = len(sentences)
-
-    # Use the same prompt template to summarize each of the
-    # NUM_SENTENCES. For some reason, langchain doesn't like if you
-    # split the template string over multiple lines
-    prompt = PromptTemplate(
-      input_variables=["text_to_summarize"],
-      template="Can you please summarize the following text in 10 words: {text_to_summarize}?",
-    )
-
-    # Define which LLM we want to use. Right now, limit it to OpenAI
-    # or HuggingFaceHub.
+    # Get the LLM and embeddings based on the user inputs.
     llm = LLMSpecification(MODEL_HUB, MODEL_NAME).get_llm()
+    embeddings = LLMEmbeddings(MODEL_HUB, MODEL_NAME).get_embeddings()
 
-    # Sequentially get the next NUM_SENTENCES.
-    response = ""
-    summaries = []
-    for i in range(
-        0,
-        number_of_sentences_in_document,
-        int(NUM_SENTENCES)
-    ):
-        next_sentences = get_next_sentences(document, i, int(NUM_SENTENCES))
-        chain = LLMChain(llm=llm, prompt=prompt)
-        summaries.append(chain.run(next_sentences))
-        response += "LLM's summary:\n" + summaries[-1]
-        response += "\n"
-        response += "The actual text:\n" + next_sentences
-        response += "\n\n"
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=20
+    )
+    # We need to convert the text into a LangChain document
+    document = text_splitter.create_documents([raw_text])
+    chunked_raw_text = text_splitter.split_documents(document)
+    embedding_list = embeddings.embed_documents(
+        [t.page_content for t in chunked_raw_text]
+    )
+
+    # Store our embedding list in a searchable vector database
+    db = FAISS.from_documents(chunked_raw_text, embeddings)
+
+    # Get a retriever which will retrieve the 10 closest results
+    # to a query
+    retriever = db.as_retriever(search_kwargs={"k" : 10})
+
     
-    return response
+    # MEMORY
+    # Every prompt will need a "human_input" input, even if it's 
+    # not actually the human inputting it. E.g. it might be
+    # NUM_SENTENCES of the document we've parsed
+    memory=ConversationBufferMemory(
+        memory_key="chat_history",
+        input_key="human_input"
+    )
 
+    # PERSONA
+    ## Define our reader's persona
+    persona = (
+        """
+        You are a kind and compassionate assistant. Your main
+        role is to help people read. You use short sentences.
+        You are having a conversation with a human. When you respond,
+        you keep your answers to 10 - 15 words and you use simple
+        vocabulary.
+        """
+    )
 
+    # WELCOME
+    ## Make a chat prompt for the reader to welcome the user to
+    ## CogniFlow. Human input should just be empty. Here, human_input
+    ## will be a dummy input, since the memory has it as the input_key.
+    welcome_prompt = PromptTemplate(
+        input_variables=[
+            "persona",
+            "chat_history",
+            "human_input"
+        ],
+        template=(
+            """
+            {persona}
+
+            Here is the chat history so far:
+            
+            {chat_history}
+
+            Welcome the user to CogniFlow. Make sure to use the words
+            "CogniFlow" in your welcome exactly. Tell the user they
+            can ask you any questions. If they ask you what CogniFlow
+            is, tell them that you are a reading assistant. You are
+            starting this conversation.
+
+            {human_input}
+
+            YOUR RESPONSE:
+            """
+        )
+    )
+
+    welcome_chain = LLMChain(
+        llm=llm,
+        prompt=welcome_prompt,
+        verbose=False,
+        memory=memory
+    )
+
+    welcome = welcome_chain.predict(
+        persona=persona,
+        human_input=""
+    )
+
+    return welcome.strip()

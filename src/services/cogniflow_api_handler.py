@@ -1,5 +1,5 @@
 from flask_restful import Api, Resource, reqparse
-from services.cogniflow_core import cogniflow_core
+import  services.cogniflow_core as cogniflow_core
 from main import *
 import json
 import requests
@@ -29,25 +29,30 @@ class CognitionFlowApiHandler(Resource):
     # include a conversation status key in the post input/output to
     # know where we are in the conversation.
     parser = reqparse.RequestParser()
-    parser.add_argument('postContent', type=str, location='form')
-    parser.add_argument('numSentences', type=int, location='form')
+    parser.add_argument('NUM_SENTENCES', type=int, location='form')
+    parser.add_argument('PATH_TO_FILE', type=str, location='form')
+    parser.add_argument('MODEL_HUB', type=str, location='form')
+    parser.add_argument('MODEL_NAME', type=str, location='form')
     args = parser.parse_args()
 
-    text = args['postContent']
-    num_sentences = args['numSentences']
+    NUM_SENTENCES = args['NUM_SENTENCES']
+    PATH_TO_FILE = args['PATH_TO_FILE']
+    MODEL_HUB = args['MODEL_HUB']
+    MODEL_NAME = args['MODEL_NAME']
 
+    print(NUM_SENTENCES)
 
-    data = self.query(
-        {
-            "inputs": text,
-            "parameters": {"no_repeat_ngram_size": 3, "min_length": num_sentences, "max_length": 256, "encoder_no_repeat_ngram_size": 3},
-        })
-
-    
-    # ret_msg = cogniflow_core(text, num_sentences, "HuggingFaceHub", "facebook/bart-large-cnn")
-
+    data = cogniflow_core.preprocessing(
+      NUM_SENTENCES,
+      PATH_TO_FILE,
+      MODEL_HUB,
+      MODEL_NAME
+    )
     print(data)
-    final_ret = {"status": "Success", "summary": data[0]["summary_text"]}
+    final_ret = {
+      "status": "Success",
+      "summary": data,
+    }
 
     return final_ret
 
