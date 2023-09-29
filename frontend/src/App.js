@@ -8,13 +8,13 @@ const App = () => {
   const [initOutput, setInitOutput] = useState("")
 
   // For debugging
-  console.log(summary)
-  console.log(initOutput)
+  // console.log(summary)
+  // console.log(initOutput)
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log(e);
+    // console.log(e);
 
     // Read the form data
     const form = e.target;
@@ -28,11 +28,11 @@ const App = () => {
 
   const initParamsSubmit = async (e) => {
     e.preventDefault();
-    console.log(e);
+    // console.log(e);
     const form = e.target;
     const formData = new FormData(form);
     const response = await axios.post('http://127.0.0.1:5000/initialization', formData)
-    setInitOutput("ohHai")
+    setInitOutput(response.data.initialized)
   }
 
   return (
@@ -91,20 +91,26 @@ const App = () => {
           </label>
           <hr /> */}
           <br/>
-          <button type="submit">Get Summary</button>
+          <button type="submit">Initialize</button>
         </form>
-        <form> {/*onSubmit={humanInputSubmit}>*/}
+        <p>Init ouptut is: {initOutput}</p>
+        <br/>
+        <br/>
+        <form onSubmit={handleSubmit}>
           <label>
             This is where you write to the chatbot
+            <br/>
             <textarea
-              name="humanContent"
+              name="HUMAN_MESSAGE"
               defaultValue=""
-              rows={20}
+              rows={5}
               cols={80}
             />
           </label>
+          <br/>
+          <button type="submit">Return</button>
         </form>
-        <p>Initialization output is: {initOutput}</p>
+        <p>Chatbot ouptut is: {summary}</p>
       </header>
     </div>
   )
