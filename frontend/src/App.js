@@ -93,7 +93,7 @@ const App = () => {
           <br/>
           <button type="submit">Initialize</button>
         </form>
-        <p>Init ouptut is: {initOutput}</p>
+        <p>Init ouptut is: {initOutput}... also this initialization isn't working so ignore it!</p>
         <br/>
         <br/>
         <form onSubmit={handleSubmit}>
