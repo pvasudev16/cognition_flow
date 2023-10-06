@@ -67,6 +67,9 @@ class CognitionFlowApiHandler(Resource):
         # Persona
         self.persona = None
 
+        # Hold the post-processed sentences
+        self.sentences = None
+
         # Conversation status: welcome, initial conversation, summary,
         # etc.
         self.conversation_status = "welcome"
@@ -79,6 +82,7 @@ class CognitionFlowApiHandler(Resource):
         }
 
     def post(self):
+        print(self.conversation_status)
         # Session not working for now so hard code in parameters
         NUM_SENTENCES = 3
         PATH_TO_FILE = "https://www.theguardian.com/football/2023/sep/30/tottenham-liverpool-premier-league-match-report"
@@ -131,4 +135,10 @@ class CognitionFlowApiHandler(Resource):
 
             return {"summary" : welcome.strip()}
 
+        elif self.conversation_status == "introductory_conversation":
+            parser = reqparse.RequestParser()
+            parser.add_argument('HUMAN_INPUT', type=int, location='form')
+            args = parser.parse_args()
+            text = args['HUMAN_INPUT']
+            return {"summary" : text}
 
