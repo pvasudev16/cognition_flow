@@ -3,11 +3,16 @@ import services.cogniflow_core as cfc
 from flask import session
 import services.prompt_library as prompt_library
 
+# For a useful intro on how to transfer db between files in Flask see
+# https://stackoverflow.com/questions/56712921/access-db-from-a-separate-file-flask-sqlalchemy-python3
+# from app import db
+
 # TEMP; Axe these because these are in services.cogniflow_core
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 
-class InitializationHandler(Resource):
+
+class InitializationHandler(Resource):   
     # Initialization should:
     # - Gather and store the four parameters
     #   (NUM_SENTENCES, PATH_TO_FILE, MODEL_HUB, MODEL_NAME) as session
@@ -39,14 +44,15 @@ class InitializationHandler(Resource):
         PATH_TO_FILE = args['PATH_TO_FILE']
         MODEL_HUB = args['MODEL_HUB']
         MODEL_NAME = args['MODEL_NAME']
-        session['NUM_SENTENCES'] = NUM_SENTENCES
-        session['PATH_TO_FILE'] = PATH_TO_FILE
-        session['MODEL_HUB'] = MODEL_HUB
-        session['MODEL_NAME'] = MODEL_NAME
-        session['INITIALIZED'] = "TRUE"
-        session.modified=True
-        print(session)
-        return {"initialized" : str(session['INITIALIZED'])}
+        # config = Configuration(
+        #     num_sentences = NUM_SENTENCES,
+        #     path_to_file = PATH_TO_FILE,
+        #     model_hub = MODEL_HUB,
+        #     model_name = MODEL_NAME
+        # )
+        # db.session.add(config)
+        # db.session.commit()
+        return {"initialized" : "true"}
 
 
 class CognitionFlowApiHandler(Resource):
