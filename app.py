@@ -1,9 +1,7 @@
 import sys
 sys.path.insert(1, "./src")
 from flask import Flask, request
-# from flask_restful import Api
 from flask_cors import CORS #comment this on deployment
-# from services.cogniflow_api_handler import CognitionFlowApiHandler, InitializationHandler
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
@@ -33,14 +31,6 @@ class Configuration(db.Model):
 app.secret_key = "dflajdflajdflasjdfljasldfjalsd"
 CORS(app, supports_credentials=True) #comment this on deployment
 
-# api = Api(app)
-# api.add_resource(CognitionFlowApiHandler, '/')
-# api.add_resource(InitializationHandler, '/initialization')
-
-@app.route("/", methods=["POST"])
-def cogniflow_io():
-    return {"summary" : "hello"}
-
 @app.route("/initialization", methods=["POST"])
 def initialize():
     if request.method == 'POST':
@@ -54,10 +44,8 @@ def initialize():
             model_hub = MODEL_HUB,
             model_name = MODEL_NAME
         )
-        print(config.id)
         db.session.add(config)
         db.session.commit()
-        print(config.id)
         message = (
             "NUM_SENTENCES="
             + str(Configuration.query.get(config.id).num_sentences)
@@ -74,8 +62,29 @@ def initialize():
         # To get the id of the Configuration you just committed, see
         # Miguel Grinberg's post at
         # https://www.reddit.com/r/flask/comments/3mhgt1/how_do_i_grab_the_id_of_an_object_after_ive/
-    return {"initialized" : message}
+        return {
+            "initialized" : message,
+            "id" : config.id
+        }
 
-if __name__ == "__main__":
-    db.create_all()
-    app.run()
+@app.route("/", methods=["POST"])
+def cogniflow_io():
+    if request.method == "POST":
+        HUMAN_MESSAGE = request.form['HUMAN_MESSAGE']
+        ID = request.form['ID']
+        num_sentences = Configuration.query.get(ID).num_sentences
+        message = (
+            "Human message is: "
+            + HUMAN_MESSAGE
+            + ", "
+            + "ID="
+            + ID
+            + ", "
+            + "NUM_SENTENCES="
+            + str(num_sentences)
+        )
+        return {"summary" : message}
+
+# if __name__ == "__main__":
+#     db.create_all()
+#     app.run()

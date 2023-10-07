@@ -6,6 +6,7 @@ const App = () => {
   // const [userInput, setUserInput] = useState("")
   const [summary, setSummary] = useState("")
   const [initOutput, setInitOutput] = useState("")
+  const [id, setID] = useState("")
 
   // For debugging
   // console.log(summary)
@@ -13,9 +14,6 @@ const App = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // console.log(e);
-
     // Read the form data
     const form = e.target;
     const formData = new FormData(form);
@@ -33,6 +31,7 @@ const App = () => {
     const formData = new FormData(form);
     const response = await axios.post('http://127.0.0.1:5000/initialization', formData)
     setInitOutput(response.data.initialized)
+    setID(response.data.id)
   }
 
   return (
@@ -94,9 +93,18 @@ const App = () => {
           <button type="submit">Initialize</button>
         </form>
         <p>Init ouptut is: {initOutput}</p>
+        <p>The id is: {id}</p>
         <br/>
         <br/>
         <form onSubmit={handleSubmit}>
+        <label>
+            ID:
+            <input
+              name="ID"
+              value={id}
+            />
+          </label>
+          <br/>
           <label>
             This is where you write to the chatbot
             <br/>
