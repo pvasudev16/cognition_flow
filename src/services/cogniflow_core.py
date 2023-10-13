@@ -52,9 +52,6 @@ def split_and_chunk_text(raw_text, chunk_size=500, chunk_overlap=20):
 def get_vector_db(chunked_raw_text, embeddings):
     return FAISS.from_documents(chunked_raw_text, embeddings)
 
-def serialize_vector_db(vector_db, folder_path, filename):
-    vector_db.save_local(vector_db, folder_path, filename)
-
 def get_vector_db_retriever(db, k=10):
     # k specifies to retrieve the k-closest queires
     return db.as_retriever(search_kwargs={"k" : k})
@@ -68,6 +65,36 @@ def get_memory():
         memory_key="chat_history",
         input_key="human_input"
     )
+
+def get_memory_from_buffer_string(
+    buffer_string,
+    ai_prefix,
+    human_prefix
+):
+    # buffer_string is a string that was returned from
+    # ConversationBufferHistory.buffer_as_str.
+    split_buffer_string = buffer_string.split("\n")
+    memory = ConversationBufferMemory(
+        memory_key="chat_history",
+        input_key="human_input",
+        ai_prefix=ai_prefix,
+        human_prefix=human_prefix
+    )
+    for s in split_buffer_string:
+        if s.find(ai_prefix) == 0: # AI speaking
+            memory.chat_memory.add_ai_message(
+                s[len(ai_prefix) + 2:]
+            )
+        elif s.find(human_prefix) == 0: # Human speaking
+            memory.chat_memory.add_user_message(
+                s[len(human_prefix) + 2:]
+            )
+        else:
+            raise Exception(
+                "Neither AI or Human was speaking"
+            )
+    return memory
+    
 
 # PERSONA
 ## Define our reader's persona
