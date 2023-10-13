@@ -36,6 +36,7 @@ class Configuration(db.Model):
     preprocessed = db.Column(db.Boolean)
     raw_text = db.Column(db.Text)
     vector_db = db.Column(db.LargeBinary)
+    memory_buffer_string = db.Column(db.Text)
 
     # Status
     status = db.Column(db.String(50))
@@ -128,7 +129,7 @@ def cogniflow_io():
             db.session.add(config)
             db.session.commit()
         # Program outline:
-        if config.status == "Welcome":
+        if config.status == "welcome":
             # Nothing in chat history yet, so get an empty memory
             memory = cfc.get_memory()
 
@@ -180,26 +181,26 @@ def cogniflow_io():
             db.session.commit()
 
             return {"summary" : welcome.strip()}
-        num_sentences = config.num_sentences
-        raw_text = config.raw_text
-        preprocessed = config.preprocessed
-        message = (
-            "Human message is: "
-            + HUMAN_MESSAGE
-            + ",\n"
-            + "ID="
-            + ID
-            + ",\n"
-            + "NUM_SENTENCES="
-            + str(num_sentences)
-            + ",\n"
-            + "raw_text="
-            + raw_text[400:500]
-            + ",\n"
-            + "preprocssed="
-            + str(preprocessed) 
-        )
-        return {"summary" : message}
+        # num_sentences = config.num_sentences
+        # raw_text = config.raw_text
+        # preprocessed = config.preprocessed
+        # message = (
+        #     "Human message is: "
+        #     + HUMAN_MESSAGE
+        #     + ",\n"
+        #     + "ID="
+        #     + ID
+        #     + ",\n"
+        #     + "NUM_SENTENCES="
+        #     + str(num_sentences)
+        #     + ",\n"
+        #     + "raw_text="
+        #     + raw_text[400:500]
+        #     + ",\n"
+        #     + "preprocssed="
+        #     + str(preprocessed)
+        # )
+        return {"summary" : "Hi"}
 
 # if __name__ == "__main__":
 #     db.create_all()
