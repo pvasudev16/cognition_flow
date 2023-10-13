@@ -329,10 +329,6 @@ def main():
 
 
     while not ready_to_go:
-        print(
-            "DEBUGGING: Chatbot: "
-            + check_if_ready
-        )
         print("Chatbot: " + check_if_ready.strip())
         human_input = input("Human: ")
         check_if_ready = check_if_ready_chain.predict(
@@ -343,6 +339,9 @@ def main():
             ready_to_go = True
             break
         print("Chatbot: " + check_if_ready.strip())
+    
+
+    print(memory.load_memory_variables({}))
 
     # SUMMARIZATION (PREPARATION)
     ## Prepare the prompts and chains we'll need to do

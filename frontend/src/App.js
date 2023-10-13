@@ -60,7 +60,7 @@ const App = () => {
             PATH_TO_FILE:
             <input
               name="PATH_TO_FILE"
-              defaultValue=""
+              defaultValue="./elephants_short.txt"
             />
           </label>
           <br/>

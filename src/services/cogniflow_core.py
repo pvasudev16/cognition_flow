@@ -52,6 +52,9 @@ def split_and_chunk_text(raw_text, chunk_size=500, chunk_overlap=20):
 def get_vector_db(chunked_raw_text, embeddings):
     return FAISS.from_documents(chunked_raw_text, embeddings)
 
+def serialize_vector_db(vector_db, folder_path, filename):
+    vector_db.save_local(vector_db, folder_path, filename)
+
 def get_vector_db_retriever(db, k=10):
     # k specifies to retrieve the k-closest queires
     return db.as_retriever(search_kwargs={"k" : k})
