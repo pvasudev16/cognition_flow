@@ -8,7 +8,10 @@ from sqlalchemy.sql import func
 import os
 
 import services.cogniflow_core as cfc
-import faiss
+
+# Do I need these here?
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 
 # Following SQLAlchemy tutorial at https://www.digitalocean.com/community/tutorials/how-to-use-flask-sqlalchemy-to-interact-with-databases-in-a-flask-application
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -52,14 +55,15 @@ def initialize():
         MODEL_HUB = request.form['MODEL_HUB']
         MODEL_NAME = request.form['MODEL_NAME']
         config = Configuration(
-            num_sentences = NUM_SENTENCES,
-            path_to_file = PATH_TO_FILE,
-            model_hub = MODEL_HUB,
-            model_name = MODEL_NAME,
-            preprocessed = False,
-            raw_text = None,
-            vector_db = None,
-            status = None
+            num_sentences=NUM_SENTENCES,
+            path_to_file=PATH_TO_FILE,
+            model_hub=MODEL_HUB,
+            model_name=MODEL_NAME,
+            preprocessed=False,
+            raw_text=None,
+            vector_db=None,
+            memory_buffer_string=None,
+            status="welcome"
         )
         db.session.add(config)
         db.session.commit()
@@ -105,29 +109,77 @@ def cogniflow_io():
             config.raw_text = raw_text
             config.preprocessed = True
 
-            # Get embeddings to make vector database and store
-            # it
-
-            # llm = cfc.get_llm(MODEL_HUB, MODEL_NAME)
+            # Get embeddings to make vector database and store it
             embeddings = cfc.get_embeddings(MODEL_HUB, MODEL_NAME)
             chunked_raw_text = cfc.split_and_chunk_text(raw_text)
             vector_db = cfc.get_vector_db(
                 chunked_raw_text,
                 embeddings
             )
-            
             config.vector_db = vector_db.serialize_to_bytes()
             # To deserialize, use deserialize_from_bytes()
             # vector_db_retriever = cfc.get_vector_db_retriever(
             #     vector_db
             # )
 
-            # config.vector_db = vector_db
-            # memory = cfc.get_memory()
-            # persona = cfc.get_persona()
-            # preprocessed = True
+            # Probably can kill cfc.get_memory()
+            # Use cfc.get_memory_from_buffer_string(config.memory_buffer_string, ai_prefix, human_prefix)
+            config.preprocessed = True
             db.session.add(config)
             db.session.commit()
+        # Program outline:
+        if config.status == "Welcome":
+            # Nothing in chat history yet, so get an empty memory
+            memory = cfc.get_memory()
+
+            llm = cfc.get_llm(config.model_hub, config.model_name)
+            persona = cfc.get_persona()
+
+            welcome_prompt = PromptTemplate(
+                input_variables=[
+                    "persona",
+                    "chat_history",
+                    "human_input"
+                ],
+                template=(
+                    """
+                    {persona}
+
+                    Here is the chat history so far:
+                    
+                    {chat_history}
+
+                    Welcome the user to CogniFlow. Make sure to use the words
+                    "CogniFlow" in your welcome exactly. Tell the user they
+                    can ask you any questions. If they ask you what CogniFlow
+                    is, tell them that you are a reading assistant. You are
+                    starting this conversation.
+
+                    {human_input}
+
+                    YOUR RESPONSE:
+                    """
+                )
+            )
+            welcome_chain = LLMChain(
+                llm=llm,
+                prompt=welcome_prompt,
+                verbose=False,
+                memory=memory
+            )
+
+            welcome = welcome_chain.predict(
+                persona=persona,
+                human_input=""
+            )
+
+            # Update chat history and status
+            config.memory_buffer_as_string = memory.buffer_as_str
+            config.status = "Don't know yet!"
+            db.session.add(config)
+            db.session.commit()
+
+            return {"summary" : welcome.strip()}
         num_sentences = config.num_sentences
         raw_text = config.raw_text
         preprocessed = config.preprocessed
