@@ -68,12 +68,12 @@ def get_memory():
 
 def get_memory_from_buffer_string(
     buffer_string,
-    ai_prefix,
-    human_prefix
+    ai_prefix="AI",
+    human_prefix="Human"
 ):
     # buffer_string is a string that was returned from
     # ConversationBufferHistory.buffer_as_str.
-    split_buffer_string = buffer_string.split("\n")
+    split_buffer_string = str(buffer_string).split("\n")
     memory = ConversationBufferMemory(
         memory_key="chat_history",
         input_key="human_input",
