@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(1, "./src")
-from flask import Flask, request
+from flask import Flask, request, redirect
 from flask_cors import CORS #comment this on deployment
 
 from flask_sqlalchemy import SQLAlchemy
@@ -12,6 +12,7 @@ import services.cogniflow_core as cfc
 # Do I need these here?
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+import stanza
 
 # Following SQLAlchemy tutorial at https://www.digitalocean.com/community/tutorials/how-to-use-flask-sqlalchemy-to-interact-with-databases-in-a-flask-application
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -37,7 +38,7 @@ class Configuration(db.Model):
                                          # database for the text?
     raw_text = db.Column(db.Text)
     vector_db = db.Column(db.LargeBinary)
-    memory_buffer_string = db.Column(db.Text) # Memory buffer string
+    memory_buffer_string = db.Column(db.String(10000)) # Memory buffer string
                                               # to (re-)construct 
                                               # memory
     intro_ready_to_go = db.Column(db.Boolean) # Whether or not to
@@ -49,7 +50,7 @@ class Configuration(db.Model):
     status = db.Column(db.String(50))
 
     def __repr__(self):
-        return f'<path_to_file[0:25]: {self.path_to_file[0:25]}'
+        return f'memory_buffer: {self.memory_buffer_string}'
 
 
 app.secret_key = "dflajdflajdflasjdfljasldfjalsd"
@@ -76,24 +77,11 @@ def initialize():
         )
         db.session.add(config)
         db.session.commit()
-        message = (
-            "NUM_SENTENCES="
-            + str(Configuration.query.get(config.id).num_sentences)
-            + ", "
-            + "PATH_TO_FILE="
-            + Configuration.query.get(config.id).path_to_file[0:10]
-            + ", "
-            + "MODEL_HUB="
-            + Configuration.query.get(config.id).model_hub
-            + ", "
-            + "MODEL_NAME="
-            + Configuration.query.get(config.id).model_name
-        )
         # To get the id of the Configuration you just committed, see
         # Miguel Grinberg's post at
         # https://www.reddit.com/r/flask/comments/3mhgt1/how_do_i_grab_the_id_of_an_object_after_ive/
         return {
-            "initialized" : message,
+            "initialized" : "initialized",
             "id" : config.id
         }
 
@@ -134,7 +122,7 @@ def cogniflow_io():
             # Probably can kill cfc.get_memory()
             # Use cfc.get_memory_from_buffer_string(config.memory_buffer_string, ai_prefix, human_prefix)
             config.preprocessed = True
-            db.session.add(config)
+            # db.session.add(config)
             db.session.commit()
         
         # Program outline:
@@ -192,13 +180,14 @@ def cogniflow_io():
             )
 
             # Update chat history and status
-            config.memory_buffer_as_string = memory.buffer_as_str
+            config.memory_buffer_string = memory.buffer_as_str
             config.status = "introductory"
-            db.session.add(config)
+
             db.session.commit()
             return {"summary" : welcome.strip()}
         
         if config.status == "introductory":
+            print("introductory convo")
             # INTRODUCTORY CONVERSATION
             ## This is the converation after the bot has welcomed the
             ## user to CogniFlow. This conversation goes on until the
@@ -206,6 +195,7 @@ def cogniflow_io():
 
             # Reconstruct the chat memory
             memory_buffer_as_string = config.memory_buffer_string
+            print(repr(memory_buffer_as_string))
             if memory_buffer_as_string:
                 memory = cfc.get_memory_from_buffer_string(
                     config.memory_buffer_string
@@ -227,7 +217,7 @@ def cogniflow_io():
                     {persona}
                     
                     Tell the human that when they are ready to start they
-                    can tell you. If the human indicates that they are ready
+                    can tell you. Only if the human indicates that they are ready
                     to start output the phrase "Let's go" exactly. Continue
                     the conversation with the human until they tell you they
                     are ready to go.
@@ -254,38 +244,53 @@ def cogniflow_io():
                 )
                 if "Let's go" in bot_output:
                     config.intro_ready_to_go = True
-                    config.status = "Who knows?"
-                db.session.add(config)
-                db.session.commit()
-                return {"summary" : bot_output}
+                    config.status = "document_processing"
+                    db.session.commit()
+                    # return {"summary" : bot_output}
+                    # https://stackoverflow.com/questions/15473626/make-a-post-request-while-redirecting-in-flask
+                    return redirect("/", code=307)       
             else:
-                config.status = "Who knows?"
-                db.session.add(config)
-                db.session.commit()
-                return {"summary" : "Will this even be hit?"}
+                raise Exception(
+                    "Once the user has said they're ready to go "
+                    + "the introductory conversation should be over")
+            # Update chat history and status
+            config.memory_buffer_string = memory.buffer_as_str
+            db.session.commit()
+            return {"summary" : bot_output}
             
-        if config.status == "Who knows?":
-            return {"summary" : "Hello"}
-        # num_sentences = config.num_sentences
-        # raw_text = config.raw_text
-        # preprocessed = config.preprocessed
-        # message = (
-        #     "Human message is: "
-        #     + HUMAN_MESSAGE
-        #     + ",\n"
-        #     + "ID="
-        #     + ID
-        #     + ",\n"
-        #     + "NUM_SENTENCES="
-        #     + str(num_sentences)
-        #     + ",\n"
-        #     + "raw_text="
-        #     + raw_text[400:500]
-        #     + ",\n"
-        #     + "preprocssed="
-        #     + str(preprocessed)
-        # )
-        return {"summary" : "Hi"}
+        if config.status == "document_processing":
+            print("document_preprocssing convo")
+            # DOCUMENT PROCESSING
+            #
+            # Start by obtaining the main text if we are reading a
+            # remote source. Not ideal, but ask the user for some help
+            # in finding the start and end of the text
+            # if not cfc.is_local(config.path_to_file):
+                # raw_text = cfc.get_start_and_end_points(raw_text)
+            
+            # Use stanza to tokenize the document and find all the sentences.
+            # Refer to the output of the tokenizer as the "document"
+            # tokenizer = stanza.Pipeline(
+            #     lang='en',
+            #     processors='tokenize',
+            #     verbose=False
+            # )
+            # document = tokenizer(raw_text)
+
+            # Get the sentences and the number of setnences in the document
+            # sentences = document.sentences
+            # number_of_sentences_in_document = len(sentences)
+
+            # Store the NUM_SENTENCES we get sequentially
+            # summaries = []
+
+            # Cursor to track what sentence we're at in the text. Start
+            # at the beginning
+            # c = 0
+            # db.session.add(config)
+            # db.session.commit()
+            return {"summary" : "document_processing"}
+        return {"summary" : "Garbage"}
 
 # if __name__ == "__main__":
 #     db.create_all()
