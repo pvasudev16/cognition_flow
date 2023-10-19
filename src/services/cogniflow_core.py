@@ -1,5 +1,6 @@
 import sys
 from typing import *
+import re
 import stanza
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
@@ -63,37 +64,97 @@ def get_vector_db_retriever(db, k=10):
 def get_memory():
     return ConversationBufferMemory(
         memory_key="chat_history",
-        input_key="human_input"
+        input_key="human_input",
+        ai_prefix="PREFIX_AI",
+        human_prefix="PREFIX_Human",
+        return_messages=True
     )
 
 def get_memory_from_buffer_string(
     buffer_string,
-    ai_prefix="AI",
-    human_prefix="Human"
+    ai_prefix="PREFIX_AI",
+    human_prefix="PREFIX_Human"
 ):
     # buffer_string is a string that was returned from
     # ConversationBufferHistory.buffer_as_str.
-    split_buffer_string = str(buffer_string).split("\n")
     memory = ConversationBufferMemory(
         memory_key="chat_history",
         input_key="human_input",
-        ai_prefix=ai_prefix,
-        human_prefix=human_prefix
+        ai_prefix="PREFIX_AI",
+        human_prefix="PREFIX_Human"
     )
-    for s in split_buffer_string:
-        if s.find(ai_prefix) == 0: # AI speaking
-            memory.chat_memory.add_ai_message(
-                s[len(ai_prefix) + 2:]
-            )
-        elif s.find(human_prefix) == 0: # Human speaking
+    human_positions = [
+        m.start() for m in re.finditer(human_prefix, buffer_string)
+    ]
+    ai_positions = [
+        m.start() for m in re.finditer(ai_prefix, buffer_string)
+    ]
+    positions = sorted(human_positions + ai_positions)
+
+    if human_positions[0] < ai_positions[0]: # human speaks first
+        for i  in range(len(positions) - 1):
+            # if i is even, it's a human message; if it's odd, it's an ai message
+            if i % 2 == 0:
+                memory.chat_memory.add_user_message(
+                    buffer_string[
+                        positions[i] + len(human_prefix) + 2
+                        : positions[i + 1]
+                    ].strip()
+                )
+            else:
+                memory.chat_memory.add_ai_message(
+                    buffer_string[
+                        positions[i] + len(ai_prefix) + 2
+                        : positions[i + 1]
+                    ].strip()
+                )
+                    # last message
+        if len(positions) % 2 == 1: # last message is human's
             memory.chat_memory.add_user_message(
-                s[len(human_prefix) + 2:]
+                buffer_string[
+                    positions[-1] + len(human_prefix) + 2:
+                ].strip()
             )
-        else:
-            raise Exception(
-                "Neither AI or Human was speaking"
+        else: # last message is ai's
+            memory.chat_memory.add_ai_message(
+                buffer_string[
+                    positions[-1] + len(ai_prefix) + 2:
+                ].strip()
+            )
+            
+
+    else: # AI speaks first
+        for i  in range(len(positions) - 1):
+            # if i is even, it's a AI message; if it's odd, it's an Human message
+            if i % 2 == 0:
+                memory.chat_memory.add_ai_message(
+                    buffer_string[
+                        positions[i] + len(ai_prefix) + 2
+                        : positions[i + 1]
+                    ].strip()
+                )
+            else:
+                memory.chat_memory.add_user_message(
+                    buffer_string[
+                        positions[i] + len(human_prefix) + 2
+                        : positions[i + 1]
+                    ].strip()
+                )
+        # last message
+        if len(positions) % 2 == 1: # last message is AI's
+            memory.chat_memory.add_ai_message(
+                buffer_string[
+                    positions[-1] + len(ai_prefix) + 2:
+                ].strip()
+            )
+        else: # last message is ai's
+            memory.chat_memory.add_user_message(
+                buffer_string[
+                    positions[-1] + len(human_prefix) + 2:
+                ].strip()
             )
     return memory
+
     
 
 # PERSONA
