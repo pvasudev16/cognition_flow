@@ -13,6 +13,7 @@ import services.cogniflow_core as cfc
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 import stanza
+import json
 
 # Following SQLAlchemy tutorial at https://www.digitalocean.com/community/tutorials/how-to-use-flask-sqlalchemy-to-interact-with-databases-in-a-flask-application
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -38,13 +39,19 @@ class Configuration(db.Model):
                                          # database for the text?
     raw_text = db.Column(db.Text)
     vector_db = db.Column(db.LargeBinary)
-    memory_buffer_string = db.Column(db.String(10000)) # Memory buffer string
+    memory_buffer_string = db.Column(db.Text) # Memory buffer string
                                               # to (re-)construct 
                                               # memory
     intro_ready_to_go = db.Column(db.Boolean) # Whether or not to
                                               # continue the
                                               # conversation loop in
                                               # the intro
+    sentences = db.Column(db.Text) # Vector of sentences, stored as
+                                   # JSON, of the text.
+    number_of_sentences_in_text = db.Column(db.Integer)
+    cursor = db.Column(db.Integer) # Cursor telling us how many
+                                   # sentences has the user read 
+                                   # alreadypytho
 
     # Status
     status = db.Column(db.String(50))
@@ -187,7 +194,6 @@ def cogniflow_io():
             return {"summary" : welcome.strip()}
         
         if config.status == "introductory":
-            print("introductory convo")
             # INTRODUCTORY CONVERSATION
             ## This is the converation after the bot has welcomed the
             ## user to CogniFlow. This conversation goes on until the
@@ -195,7 +201,6 @@ def cogniflow_io():
 
             # Reconstruct the chat memory
             memory_buffer_as_string = config.memory_buffer_string
-            print(repr(memory_buffer_as_string))
             if memory_buffer_as_string:
                 memory = cfc.get_memory_from_buffer_string(
                     config.memory_buffer_string
@@ -244,6 +249,7 @@ def cogniflow_io():
                 )
                 if "Let's go" in bot_output:
                     config.intro_ready_to_go = True
+                    config.memory_buffer_string = memory.buffer_as_str
                     config.status = "document_processing"
                     db.session.commit()
                     # return {"summary" : bot_output}
@@ -259,37 +265,38 @@ def cogniflow_io():
             return {"summary" : bot_output}
             
         if config.status == "document_processing":
-            print("document_preprocssing convo")
             # DOCUMENT PROCESSING
-            #
-            # Start by obtaining the main text if we are reading a
+
+            # TO-DO
+            # Obtain the main text if we are reading a
             # remote source. Not ideal, but ask the user for some help
             # in finding the start and end of the text
             # if not cfc.is_local(config.path_to_file):
                 # raw_text = cfc.get_start_and_end_points(raw_text)
             
-            # Use stanza to tokenize the document and find all the sentences.
-            # Refer to the output of the tokenizer as the "document"
-            # tokenizer = stanza.Pipeline(
-            #     lang='en',
-            #     processors='tokenize',
-            #     verbose=False
-            # )
-            # document = tokenizer(raw_text)
+            # Use stanza to tokenize the document and find all the
+            # sentences. Refer to the output of the tokenizer as
+            # the "document"
+            tokenizer = stanza.Pipeline(
+                lang='en',
+                processors='tokenize',
+                verbose=False
+            )
+            document = tokenizer(config.raw_text)
 
-            # Get the sentences and the number of setnences in the document
-            # sentences = document.sentences
-            # number_of_sentences_in_document = len(sentences)
+            # Get the sentences and the number of senences
+            # in the document. Set the cursor to the start
+            # of the document
+            sentences = [s.text for s in document.sentences]
+            sentences_as_json = json.dumps(sentences)
 
-            # Store the NUM_SENTENCES we get sequentially
-            # summaries = []
+            config.sentences = sentences_as_json
+            config.number_of_sentences_in_text = len(sentences)
+            config.cursor = 0
 
-            # Cursor to track what sentence we're at in the text. Start
-            # at the beginning
-            # c = 0
-            # db.session.add(config)
-            # db.session.commit()
-            return {"summary" : "document_processing"}
+            config.status = "instructions"
+            db.session.commit()
+            return {"summary" : config.status}
         return {"summary" : "Garbage"}
 
 # if __name__ == "__main__":
