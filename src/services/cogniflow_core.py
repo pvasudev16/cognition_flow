@@ -5,6 +5,7 @@ import stanza
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
+from langchain.vectorstores import FAISS
 
 from src.util import *
 
@@ -61,14 +62,14 @@ def get_vector_db_retriever(db, k=10):
 # Every prompt will need a "human_input" input, even if it's 
 # not actually the human inputting it. E.g. it might be
 # NUM_SENTENCES of the document we've parsed
-def get_memory():
-    return ConversationBufferMemory(
-        memory_key="chat_history",
-        input_key="human_input",
-        ai_prefix="PREFIX_AI",
-        human_prefix="PREFIX_Human",
-        return_messages=True
-    )
+# def get_memory():
+#     return ConversationBufferMemory(
+#         memory_key="chat_history",
+#         input_key="human_input",
+#         ai_prefix="PREFIX_AI",
+#         human_prefix="PREFIX_Human",
+#         return_messages=True
+#     )
 
 def get_memory_from_buffer_string(
     buffer_string,
@@ -83,6 +84,10 @@ def get_memory_from_buffer_string(
         ai_prefix="PREFIX_AI",
         human_prefix="PREFIX_Human"
     )
+
+    # If there is nothing in the buffer, then just return the memory
+    if not buffer_string:
+        return memory
     human_positions = [
         m.start() for m in re.finditer(human_prefix, buffer_string)
     ]
@@ -154,6 +159,19 @@ def get_memory_from_buffer_string(
                 ].strip()
             )
     return memory
+
+def get_next_sentences(
+    sentences : List[str],
+    cursor : int,
+    number_of_sentences_to_parse: int
+):
+    string_to_return = ""
+    for j in range(number_of_sentences_to_parse):
+        if cursor + j >= len(sentences):
+            break
+        string_to_return += sentences[cursor + j]
+        string_to_return += " "
+    return string_to_return
 
     
 
