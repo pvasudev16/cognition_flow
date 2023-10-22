@@ -116,18 +116,24 @@ class Configuration(db.Model):
     # during the introductory conversation
     intro_ready_to_go = db.Column(db.Boolean)
 
-    sentences = db.Column(db.Text) # Vector of sentences, stored as
-                                   # JSON, of the text.
+    # A JSON dump of the vector of the human-parseable sentences
+    # in the text. This excludes any metadata/garbage in text
+    # scraped from URLs.
+    sentences = db.Column(db.Text)
+
+    # The number of sentences in the text
     number_of_sentences_in_text = db.Column(db.Integer)
-    cursor = db.Column(db.Integer) # Cursor telling us how many
-                                   # sentences has the user read 
-                                   # already through
-    pre_summary_ready_to_go = db.Column(db.Boolean) # Whether or not
-                                                    # the user is ready
-                                                    # to go in the
-                                                    # conversation 
-                                                    # before the
-                                                    # summaries
+
+    # A cursor indicating how many sentences have been summarized
+    # and displayed.
+    cursor = db.Column(db.Integer)
+
+    # A boolean flag indicating in the pre-summarization conversation
+    # if the user is ready to continue
+    pre_summary_ready_to_go = db.Column(db.Boolean)
+
+    # A boolean flag indicating in the summarization whether
+    # the user is ready to keep going.
     summarization_keep_going = db.Column(db.Boolean)
 
     # Status
