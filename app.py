@@ -8,8 +8,8 @@ from sqlalchemy.sql import func
 import os
 
 import services.cogniflow_core as cfc
+from src.util import * # I'd like to get rid of this
 
-# Do I need these here?
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 import stanza
@@ -25,27 +25,97 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+#### CogniFlow Outline
+# Terminology:
+# - N: number of sentences to parse at a time. This is the number of
+#      sentences CogniFlow will summarize and display at a time.
+# 0) Initialization. The user will click on the "Initialize" button
+#    to initiate the N (number of sentences to parse at a time), the
+#    path to the text file or URL, the model hub (OpenAI by default)
+#    and the model name (text-davinci-003 by default)
+# 1) Preprocessing. Get the raw text from the text file or website.
+#    If it's a website, the raw text will include all the metadata and
+#    extraneous text to the actual text itself. Form the embeddings,
+#    chunk the text, and form the vector database.
+# 2) Welcome. Assume no user input, and CogniFlow will welcome the user.
+#    This welcome leads to an initial conversation where the user can
+#    ask CogniFlow more questions.
+# 3) Introductory Conversation. Conversation loop where
+#    the user can ask CogniFlow any questions. Questions can be
+#    irrelevant (e.g. "Who is Haruki Murakami?") or relevant
+#    ("What do you do?"). Once the user indicates they are ready,
+#    CogniFlow will proceed to the document preprocessing
+# 4) Document Processing. Similar to preprocessing but different.
+#    While preprocessing chunks and vectorizes the database, here
+#    we break the text into human-parseable sentences (as opposed to
+#    just 500 character long chunks).
+#    4a) TO-DO: If the user provided a URL, we need to ask the user
+#        for some help in identifying the start/end of the text.
+#        Ask the user to identify the first and last four words
+#        of the text itself.
+# 5) Instructions. Assume no user input. CogniFlow will tell the user
+#    that CogniFlow will display a summary of the N sentences followed
+#    by the N sentences themselves. These instructions lead to the
+#    pre-summary conversation.
+# 6) Pre-summary Conversation. Conversation loop where the user can ask
+#    CogniFlow more questions. Once the user indicates they are ready to
+#    go, CogniFlow will proceed to the text summarization.
+# 7) Text Summarization. This is where we will display the summary of
+#    the N sentences followed by the N sentences themselves. In
+#    between each of the N sentences, the user can converse with
+#    CogniFlow about the displayed sentences. The user can tell
+#    CogniFlow that they want to end early
+# 8) Exit.
+
+
+# For each CogniFlow session, we will have one Configuration record,
+# which tracks the input parameters and the state of the conversation
 class Configuration(db.Model):
+    #### Primary integer key
     id = db.Column(db.Integer, primary_key=True)
 
-    # Initialization
+    #### Input paramers:
+    ####
+    # Number of sentences to parse at a time
     num_sentences = db.Column(db.Integer)
+
+    # Local path to text file or URL to web page
     path_to_file = db.Column(db.String(4096))
+
+    # Model hub to use (by deafult, OpeanAI)
     model_hub = db.Column(db.String(100))
+
+    # Model to use (by default, text-davinci-003) 
     model_name = db.Column(db.String(100))
 
-    # CogniFlow stuff
-    preprocessed = db.Column(db.Boolean) # Has CF created a vector
-                                         # database for the text?
+    #### CogniFlow State Variables
+    ####
+    # A boolean flag indicating if CogniFlow has read in the
+    # number of sentences to parse, the path to file/URL,
+    # the model hub, and the model
+    preprocessed = db.Column(db.Boolean)
+
+    # The raw text read in from the URL or the text file. If 
+    # path_to_file is a URL, this variable will not only hold the
+    # actual text but also all the metadata
     raw_text = db.Column(db.Text)
+
+    # The vector database. Get the embeddings (using the same
+    # model_hub and model_name), chunk the text, and form a
+    # FAISS vector database, holding the semantic meaning of the text
     vector_db = db.Column(db.LargeBinary)
-    memory_buffer_string = db.Column(db.Text) # Memory buffer string
-                                              # to (re-)construct 
-                                              # memory
-    intro_ready_to_go = db.Column(db.Boolean) # Whether or not to
-                                              # continue the
-                                              # conversation loop in
-                                              # the intro
+
+    # The memory buffer as a string. To decode the memory into a
+    # LangChain ConversationBufferMemory object, use
+    # cfc.get_memory_buffer_from_string(). To encode a
+    # ConversationBufferMemory object into a string, we just do
+    # memory.buffer_as_str
+    memory_buffer_string = db.Column(db.Text)
+
+    # A boolean flag indicating whether the user is ready to go
+    # during the introductory conversation
+    intro_ready_to_go = db.Column(db.Boolean)
+
     sentences = db.Column(db.Text) # Vector of sentences, stored as
                                    # JSON, of the text.
     number_of_sentences_in_text = db.Column(db.Integer)
@@ -58,6 +128,7 @@ class Configuration(db.Model):
                                                     # conversation 
                                                     # before the
                                                     # summaries
+    summarization_keep_going = db.Column(db.Boolean)
 
     # Status
     status = db.Column(db.String(50))
@@ -65,8 +136,6 @@ class Configuration(db.Model):
     def __repr__(self):
         return f'memory_buffer: {self.memory_buffer_string}'
 
-
-app.secret_key = "dflajdflajdflasjdfljasldfjalsd"
 CORS(app, supports_credentials=True) #comment this on deployment
 
 @app.route("/initialization", methods=["POST"])
@@ -90,7 +159,8 @@ def initialize():
             sentences=None,
             number_of_sentences_in_text=None,
             cursor=0,
-            pre_summary_ready_to_go=False
+            pre_summary_ready_to_go=False,
+            summarization_keep_going = True
         )
         db.session.add(config)
         db.session.commit()
@@ -418,13 +488,172 @@ def cogniflow_io():
 
                 if "Let's go" in check_if_ready:
                     config.pre_summary_ready_to_go = True
-                    config.status = "what's next"
+                    config.status = "summarization"
             
             config.memory_buffer_string = memory.buffer_as_str
             db.session.commit()
             return {"summary" : check_if_ready}
 
-        if config.status == "what's next":
+        if config.status == "summarization":
+            # SUMMARIZATION: This is the part where we summarize
+            # and display the test
+
+            # Reconstruct the chat memory and get LLM
+            memory_buffer_as_string = config.memory_buffer_string
+            memory = cfc.get_memory_from_buffer_string(
+                config.memory_buffer_string
+            )
+            llm = cfc.get_llm(config.model_hub, config.model_name)
+            
+            # SUMMARIZATION (PREPARATION)
+            ## Prepare the prompts and chains we'll need to do
+            ## the summarization.
+
+            # human_input is a dummy input
+            summary_prompt = PromptTemplate(
+                input_variables=[
+                    "human_input",
+                    "text_to_summarize",
+                    "persona",
+                    "chat_history",
+                ],
+                template=(
+                    """
+                    {persona}
+                    Here is the chat history so far:
+                
+                    {chat_history}
+
+                    Now please summarize the following text in 10 words:
+
+                    {text_to_summarize}
+                
+                    {human_input}
+
+                    YOUR RESPONSE:
+                    """
+                )
+            )
+            summary_chain = LLMChain(
+                llm=llm,
+                prompt=summary_prompt,
+                memory=memory,
+                verbose=False
+            )
+
+            # Make a prompt that will be used to discuss each of the summaries.
+            # It needs a human_input as a prompt for the chat. Also pass in
+            # the documents in case it needs to answer a question.
+            discussion_prompt = PromptTemplate(
+                input_variables=[
+                    "human_input",
+                    "persona",
+                    "most_recent_summary",
+                    "summaries",
+                    "chat_history",
+                    "documents"
+                ],
+                template=(
+                    """
+                    {persona}
+                    
+                    Here is the chat history so far:
+
+                    {chat_history}
+                    
+                    Here is the most recent summary:
+
+                    {most_recent_summary}
+
+                    and here is a summary of the text so far:
+
+                    {summaries}
+
+                    Help the human by answering any questions they may have. For
+                    example, if they ask you to define a word, define it for
+                    them. If they ask you questions about the summary, answer
+                    them.
+
+                    If the human indicates that they want to continue onto
+                    the next set of sentences then output only "Let's keep
+                    going" exactly. If the human indicates they are ready to
+                    quit, output the phrase "Let's stop" exactly.
+
+                    Here are the most relevant parts of the text to answer
+                    the user's query:
+                    {documents}
+
+                    Human: {human_input}
+                    YOUR RESPONSE:
+                    """
+                )
+            )
+            discussion_chain = LLMChain(
+                llm=llm,
+                prompt=discussion_prompt,
+                memory=memory,
+                verbose=False,
+            )
+
+            c = config.cursor
+
+            # SUMMARIZATION CONVERSATION LOOP
+            ## Now we'll do the NUM_SENTENCES by NUM_SENTENCES summarization.
+
+            # Flag indicating whether the user is ready to keep going or not
+            # By default, assume they'll do one interation.
+
+            while(config.summarization_keep_going):
+                next_sentences = get_next_sentences(document, c, config.num_sentences)
+                summary = summary_chain.predict(
+                    text_to_summarize=next_sentences,
+                    persona=persona,
+                    human_input=""
+                )
+
+                summary_string = (
+                    "The summary of sentences "
+                    + str(c)
+                    + " to "
+                    + str(c + config.num_sentences)
+                    + " is:"
+                    + summary.strip()
+                    + "\nThe actual text is:"
+                    + next_sentences
+                    + "\n"
+                )
+
+                # Advance the cursor by NUM_SENTENCES
+                c += config.num_sentences
+
+                # If we've exceeded the total number of setences, break
+                if c >= config.number_of_sentences_in_text:
+                    keep_going = False
+                
+                summaries.append(summary)
+
+                continue_conversation = True
+
+                while(continue_conversation):
+                    user_input = input("Human: ")
+                    discussion_output = discussion_chain.predict(
+                        human_input=user_input,
+                        persona=persona,
+                        most_recent_summary=summary,
+                        summaries=" ".join(summaries),
+                        documents=retriever.get_relevant_documents(user_input)
+                    )
+                    print("Chatbot: " + discussion_output)
+                    if "Let's keep going" in discussion_output:
+                        continue_conversation=False
+                    if "Let's stop" in discussion_output:
+                        continue_conversation=False
+                        keep_going=False
+
+                print("\n\n")
+
+            config.memory_buffer_string = memory.buffer_as_str
+            db.session.commit()
             return {"summary" : "what's next?"}
 
         
