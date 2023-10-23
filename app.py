@@ -172,7 +172,6 @@ def initialize():
             intro_ready_to_go=False,
             status="welcome",
             sentences=None,
-            number_of_sentences_in_text=None,
             cursor=0,
             pre_summary_ready_to_go=False,
             summarization_keep_going = True,
@@ -335,15 +334,6 @@ def cogniflow_io():
 
         #### 4) DOCUMENT PROCESSING
         if config.status == "document_processing":
-            # 4A) TO-DO: For non-local sources, get the user
-            #     to identify start/end of the relevant text
-            # if not cfc.is_local(config.path_to_file):
-                # raw_text = cfc.get_start_and_end_points(raw_text)
-            
-            # No chatbot interactions here, so no memory.
-            # TO-DO: 4A) If we use the chatbot to find start/end
-            #        then we need to get the memory
-
             # Get the human parseable sentences with Stanza
             tokenizer = stanza.Pipeline(
                 lang='en',
@@ -358,12 +348,10 @@ def cogniflow_io():
             config.number_of_sentences_in_text = len(sentences)
             config.cursor = 0
             config.status = "instructions"
-            
-            # TO-DO: 4A) If we use the chatbot to get start/end
-            #        of the text, then update chatbot memory.
 
             db.session.commit()
             return redirect("/", code=307)
+    
         
         #### 5) INSTRUCTIONS
         if config.status == "instructions":
@@ -661,7 +649,9 @@ def cogniflow_io():
         if config.status == "exit":
             return {"summary" : "Goodbye"}
         
-        return {"summary" : "Garbage"}
+        raise Exception(
+            "[NONE]: Should never go here, no status was set!"
+        )
 
 # if __name__ == "__main__":
 #     db.create_all()

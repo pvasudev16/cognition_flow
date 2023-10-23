@@ -6,6 +6,7 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.memory import ConversationBufferMemory
 from langchain.vectorstores import FAISS
+from newspaper import Article
 
 from src.util import *
 
@@ -28,7 +29,10 @@ def get_raw_text(PATH_TO_FILE):
         raw_text = "".join(lines)
     else:
         # If this is a URL, then we need to get it
-        raw_text = text_from_html(PATH_TO_FILE)
+        article = Article(PATH_TO_FILE)
+        article.download()
+        article.parse()
+        raw_text = article.text
     return raw_text
 
 def get_llm(MODEL_HUB, MODEL_NAME):
