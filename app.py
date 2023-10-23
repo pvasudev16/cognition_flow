@@ -325,8 +325,8 @@ def cogniflow_io():
                     return redirect("/", code=307)  
             else:
                 raise Exception(
-                    "Once the user has said they're ready to go "
-                    + "the introductory conversation should be over")
+                    "INTRO CONVERSATION: should never go here"
+                )
             
             config.memory_buffer_string = memory.buffer_as_str
             db.session.commit()
@@ -475,14 +475,6 @@ def cogniflow_io():
                 config.memory_buffer_string
             )
             llm = cfc.get_llm(config.model_hub, config.model_name)
-            vector_db = FAISS.deserialize_from_bytes(
-                serialized=config.vector_db,
-                embeddings=cfc.get_embeddings(
-                    config.model_hub,
-                    config.model_name
-                )
-            )
-            vector_db_retriever = cfc.get_vector_db_retriever(vector_db)
 
             # human_input is a dummy input
             summary_prompt = PromptTemplate(
@@ -516,9 +508,77 @@ def cogniflow_io():
                 verbose=False
             )
 
-            # Make a prompt that will be used to discuss each of the summaries.
-            # It needs a human_input as a prompt for the chat. Also pass in
-            # the documents in case it needs to answer a question.
+            c = config.cursor
+            sentences = json.loads(config.sentences)
+
+            summaries = []
+            if config.summaries:
+                summaries = json.loads(config.summaries)
+
+            if config.summarization_keep_going:
+                next_sentences = cfc.get_next_sentences(
+                    sentences,
+                    c,
+                    config.num_sentences
+                )
+                summary = summary_chain.predict(
+                    text_to_summarize=next_sentences,
+                    persona=cfc.get_persona(),
+                    human_input=""
+                )
+
+                summary_string = (
+                    "The summary of sentences "
+                    + str(c)
+                    + " to "
+                    + str(c + config.num_sentences)
+                    + " is:"
+                    + summary.strip()
+                    + "\nThe actual text is:"
+                    + next_sentences
+                    + "\n"
+                )
+
+                # Advance the cursor by NUM_SENTENCES
+                c += config.num_sentences
+
+                # If we've exceeded the total number of setences, break
+                if c >= config.number_of_sentences_in_text:
+                    config.summarization_keep_going = False
+                
+                summaries.append(summary)
+                config.summaries = json.dumps(summaries)
+                config.cursor = c
+                config.status = "summarization_discussion"
+                config.summarization_continue_conversation = True
+                config.memory_buffer_string = memory.buffer_as_str
+                db.session.commit()
+                return {"summary" : summary_string}
+            else:
+                raise Exception(
+                    "SUMMARIZATION: should never go here"
+                )      
+        
+        if config.status == "summarization_discussion":
+            memory = cfc.get_memory_from_buffer_string(
+                config.memory_buffer_string
+            )
+            llm = cfc.get_llm(config.model_hub, config.model_name)
+            vector_db = FAISS.deserialize_from_bytes(
+                serialized=config.vector_db,
+                embeddings=cfc.get_embeddings(
+                    config.model_hub,
+                    config.model_name
+                )
+            )
+            vector_db_retriever = cfc.get_vector_db_retriever(vector_db)
+            summaries = json.loads(config.summaries)
+
+
+            # Make a prompt that will be used to discuss each of the
+            # summaries. It needs a human_input as a prompt for the
+            # chat. Also pass in the documents in case it needs to
+            # answer a question.
             discussion_prompt = PromptTemplate(
                 input_variables=[
                     "human_input",
@@ -570,71 +630,36 @@ def cogniflow_io():
                 verbose=False,
             )
 
-            c = config.cursor
-            sentences = json.loads(config.sentences)
-
-            summaries = []
-            if config.summaries:
-                summaries = json.loads(config.summaries)
-
-            if config.summarization_keep_going:
-                next_sentences = cfc.get_next_sentences(
-                    sentences,
-                    c,
-                    config.num_sentences
-                )
-                summary = summary_chain.predict(
-                    text_to_summarize=next_sentences,
+            if config.summarization_continue_conversation:
+                discussion_output = discussion_chain.predict(
+                    human_input=HUMAN_MESSAGE,
                     persona=cfc.get_persona(),
-                    human_input=""
+                    most_recent_summary=summaries[-1],
+                    summaries=" ".join(summaries),
+                    documents=(
+                        vector_db_retriever.get_relevant_documents(
+                            HUMAN_MESSAGE
+                        )
+                    )
+                )
+                if "Let's keep going" in discussion_output:
+                    config.summarization_continue_conversation=False
+                    config.status = "summarization"
+                if "Let's stop" in discussion_output:
+                    config.summarization_continue_conversation=False
+                    config.summarization_keep_going=False
+                    config.status = "exit"
+                config.memory_buffer_string = memory.buffer_as_str
+                db.session.commit()
+                return {"summary" : discussion_output}
+            else:
+                raise Exception(
+                    "SUMMARIZATION DISCUSSION: should never go here"
                 )
 
-                summary_string = (
-                    "The summary of sentences "
-                    + str(c)
-                    + " to "
-                    + str(c + config.num_sentences)
-                    + " is:"
-                    + summary.strip()
-                    + "\nThe actual text is:"
-                    + next_sentences
-                    + "\n"
-                )
-
-                # Advance the cursor by NUM_SENTENCES
-                c += config.num_sentences
-
-                # If we've exceeded the total number of setences, break
-                if c >= config.number_of_sentences_in_text:
-                    config.summarization_keep_going = False
-                
-                summaries.append(summary)
-
-                # if config.summarization_continue_conversation:
-                #     discussion_output = discussion_chain.predict(
-                #         human_input=HUMAN_MESSAGE,
-                #         persona=cfc.get_persona(),
-                #         most_recent_summary=summary,
-                #         summaries=" ".join(summaries),
-                #         documents=(
-                #             vector_db_retriever.get_relevant_documents(
-                #                 HUMAN_MESSAGE
-                #             )
-                #         )
-                #     )
-                #     print("Chatbot: " + discussion_output)
-                #     if "Let's keep going" in discussion_output:
-                #         config.summarization_continue_conversation=False
-                #     if "Let's stop" in discussion_output:
-                #         config.summarization_continue_conversation=False
-                #         config.summarization_keep_going=False
-
-            config.cursor = c
-            config.summaries = json.dumps(summaries)
-            config.memory_buffer_string = memory.buffer_as_str
-            db.session.commit()
-            return {"summary" : summary_string}
-
+        #### 8) EXIT
+        if config.status == "exit":
+            return {"summary" : "Goodbye"}
         
         return {"summary" : "Garbage"}
 
