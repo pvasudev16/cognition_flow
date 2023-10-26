@@ -63,22 +63,6 @@ const App = () => {
               defaultValue="./elephants_short.txt"
             />
           </label>
-          <br/>
-          <label>
-            MODEL_HUB:
-            <input
-              name="MODEL_HUB"
-              defaultValue="OpenAI"
-            />
-          </label>
-          <br/>
-          <label>
-            MODEL_NAME:
-            <input
-              name="MODEL_NAME"
-              defaultValue="text-davinci-003"
-            />
-          </label>
           {/*<label>
             Enter the text you want to summarize
             <textarea
@@ -92,8 +76,8 @@ const App = () => {
           <br/>
           <button type="submit">Initialize</button>
         </form>
-        <p>Init ouptut is: {initOutput}</p>
-        <p>The id is: {id}</p>
+        {/*<p>Init ouptut is: {initOutput}</p>*/}
+        {/*<p>The id is: {id}</p>*/}
         <br/>
         <br/>
         <form onSubmit={handleSubmit}>
@@ -106,7 +90,6 @@ const App = () => {
           </label>
           <br/>
           <label>
-            This is where you write to the chatbot
             <br/>
             <textarea
               name="HUMAN_MESSAGE"

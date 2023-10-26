@@ -25,47 +25,26 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-#### CogniFlow Outline
-# Terminology:
+#### Terminology:
 # - N: number of sentences to parse at a time. This is the number of
 #      sentences CogniFlow will summarize and display at a time.
+#### CogniFlow Outline
 # 0) Initialization. The user will click on the "Initialize" button
-#    to initiate the N (number of sentences to parse at a time), the
-#    path to the text file or URL, the model hub (OpenAI by default)
-#    and the model name (text-davinci-003 by default)
+#    to initiate the N (number of sentences to parse at a time), and the
+#    URL. Assume we use OpenAI text-davinci-003
 # 1) Preprocessing. Get the raw text from the text file or website.
 #    If it's a website, the raw text will include all the metadata and
 #    extraneous text to the actual text itself. Form the embeddings,
-#    chunk the text, and form the vector database.
-# 2) Welcome. Assume no user input, and CogniFlow will welcome the user.
-#    This welcome leads to an initial conversation where the user can
-#    ask CogniFlow more questions.
-# 3) Introductory Conversation. Conversation loop where
-#    the user can ask CogniFlow any questions. Questions can be
-#    irrelevant (e.g. "Who is Haruki Murakami?") or relevant
-#    ("What do you do?"). Once the user indicates they are ready,
-#    CogniFlow will proceed to the document preprocessing
-# 4) Document Processing. Similar to preprocessing but different.
-#    While preprocessing chunks and vectorizes the database, here
-#    we break the text into human-parseable sentences (as opposed to
-#    just 500 character long chunks).
-#    4a) TO-DO: If the user provided a URL, we need to ask the user
-#        for some help in identifying the start/end of the text.
-#        Ask the user to identify the first and last four words
-#        of the text itself.
-# 5) Instructions. Assume no user input. CogniFlow will tell the user
-#    that CogniFlow will display a summary of the N sentences followed
-#    by the N sentences themselves. These instructions lead to the
-#    pre-summary conversation.
-# 6) Pre-summary Conversation. Conversation loop where the user can ask
-#    CogniFlow more questions. Once the user indicates they are ready to
-#    go, CogniFlow will proceed to the text summarization.
-# 7) Text Summarization. This is where we will display the summary of
+#    chunk the text, and form the vector database. Using the 
+#    newspaper3k package, get the main text of the article. Break the
+#    main text into human-parseable sentences (as opposed to just 500
+#    character long chunks).
+# 2) Text Summarization. This is where we will display the summary of
 #    the N sentences followed by the N sentences themselves. In
 #    between each of the N sentences, the user can converse with
 #    CogniFlow about the displayed sentences. The user can tell
 #    CogniFlow that they want to end early
-# 8) Exit.
+# 3) Exit.
 
 
 # For each CogniFlow session, we will have one Configuration record,
@@ -112,10 +91,6 @@ class Configuration(db.Model):
     # memory.buffer_as_str
     memory_buffer_string = db.Column(db.Text)
 
-    # A boolean flag indicating whether the user is ready to go
-    # during the introductory conversation
-    intro_ready_to_go = db.Column(db.Boolean)
-
     # A JSON dump of the vector of the human-parseable sentences
     # in the text. This excludes any metadata/garbage in text
     # scraped from URLs.
@@ -127,10 +102,6 @@ class Configuration(db.Model):
     # A cursor indicating how many sentences have been summarized
     # and displayed.
     cursor = db.Column(db.Integer)
-
-    # A boolean flag indicating in the pre-summarization conversation
-    # if the user is ready to continue
-    pre_summary_ready_to_go = db.Column(db.Boolean)
 
     # A boolean flag indicating in the summarization whether
     # the user is ready to keep going.
@@ -158,13 +129,11 @@ def initialize():
     if request.method == 'POST':
         NUM_SENTENCES = int(request.form['NUM_SENTENCES'])
         PATH_TO_FILE = request.form['PATH_TO_FILE']
-        MODEL_HUB = request.form['MODEL_HUB']
-        MODEL_NAME = request.form['MODEL_NAME']
         config = Configuration(
             num_sentences=NUM_SENTENCES,
             path_to_file=PATH_TO_FILE,
-            model_hub=MODEL_HUB,
-            model_name=MODEL_NAME,
+            model_hub="OpenAI",
+            model_name="text-davinci-003",
             preprocessed=False,
             raw_text=None,
             vector_db=None,
@@ -218,122 +187,7 @@ def cogniflow_io():
                 embeddings
             )
             config.vector_db = vector_db.serialize_to_bytes()
-            config.preprocessed = True
-            db.session.commit()
-        
-        #### 2) WELCOME
-        if config.status == "welcome":
-            memory = cfc.get_memory_from_buffer_string(
-                config.memory_buffer_string
-            )
-            llm = cfc.get_llm(config.model_hub, config.model_name)
 
-            welcome_prompt = PromptTemplate(
-                input_variables=[
-                    "persona",
-                    "chat_history",
-                    "human_input"
-                ],
-                template=(
-                    """
-                    {persona}
-
-                    Here is the chat history so far:
-                    
-                    {chat_history}
-
-                    Welcome the user to CogniFlow. Make sure to use the words
-                    "CogniFlow" in your welcome exactly. Tell the user they
-                    can ask you any questions. If they ask you what CogniFlow
-                    is, tell them that you are a reading assistant. You are
-                    starting this conversation.
-
-                    {human_input}
-
-                    YOUR RESPONSE:
-                    """
-                )
-            )
-            welcome_chain = LLMChain(
-                llm=llm,
-                prompt=welcome_prompt,
-                verbose=False,
-                memory=memory
-            )
-
-            welcome = welcome_chain.predict(
-                persona=cfc.get_persona(),
-                human_input="" # Note the dummy input
-            )
-
-            # Update chat history
-            config.memory_buffer_string = memory.buffer_as_str
-            config.status = "introductory"
-            db.session.commit()
-
-            return {"summary" : welcome.strip()}
-        
-        #### 3) INTRODUCTORY CONVERSATION
-        if config.status == "introductory":
-            memory = cfc.get_memory_from_buffer_string(
-                config.memory_buffer_string
-            )
-            llm = cfc.get_llm(config.model_hub, config.model_name)
-
-            intro_conversation_prompt = PromptTemplate(
-                input_variables=[
-                    "persona",
-                    "chat_history",
-                    "human_input"
-                ],
-                template= (
-                    """
-                    {persona}
-                    
-                    Tell the human that when they are ready to start they
-                    can tell you. Only if the human indicates that they are ready
-                    to start output the phrase "Let's go" exactly. Continue
-                    the conversation with the human until they tell you they
-                    are ready to go.
-                    
-                    {chat_history}
-                    
-                    Human: {human_input}
-                    YOUR RESPONSE:"""
-                )
-            )
-
-            intro_conversation_chain = LLMChain(
-                llm=llm,
-                prompt=intro_conversation_prompt,
-                verbose=False,
-                memory=memory
-            )
-
-            if not config.intro_ready_to_go:
-                bot_output =  intro_conversation_chain.predict(
-                    human_input=HUMAN_MESSAGE,
-                    persona=cfc.get_persona()
-                )
-                if "Let's go" in bot_output:
-                    config.intro_ready_to_go = True
-                    config.memory_buffer_string = memory.buffer_as_str
-                    config.status = "document_processing"
-                    db.session.commit()
-                    # https://stackoverflow.com/questions/15473626/make-a-post-request-while-redirecting-in-flask
-                    return redirect("/", code=307)  
-            else:
-                raise Exception(
-                    "INTRO CONVERSATION: should never go here"
-                )
-            
-            config.memory_buffer_string = memory.buffer_as_str
-            db.session.commit()
-
-            return {"summary" : bot_output}
-
-        #### 4) DOCUMENT PROCESSING
-        if config.status == "document_processing":
             # Get the human parseable sentences with Stanza
             tokenizer = stanza.Pipeline(
                 lang='en',
@@ -347,117 +201,12 @@ def cogniflow_io():
             config.sentences = sentences_as_json
             config.number_of_sentences_in_text = len(sentences)
             config.cursor = 0
-            config.status = "instructions"
+            config.status = "summarization"
 
-            db.session.commit()
-            return redirect("/", code=307)
-    
-        
-        #### 5) INSTRUCTIONS
-        if config.status == "instructions":
-            memory = cfc.get_memory_from_buffer_string(
-                config.memory_buffer_string
-            )
-            llm = cfc.get_llm(config.model_hub, config.model_name)
-
-            # Here, human_input is a dummy variable.
-            instruction_prompt = PromptTemplate(
-                input_variables=[
-                    "human_input",
-                    "number_of_sentences",
-                    "persona",
-                    "chat_history"
-                ],
-                template=(
-                    """
-                    {persona}
-
-                    Here is the chat history so far:
-                    
-                    {chat_history}
-                    
-                    Start by telling the user what you will do.
-                    Tell the user you'll display a summary of
-                    {number_of_sentences} sentences, followed by the actual text
-                    itself. Tell the user they will be able to discuss each
-                    summary with you. Tell the user they will be able to ask you
-                    to keep going or to stop
-                    
-                    {human_input}
-
-                    YOUR RESPONSE:
-                    """
-                )
-            )
-            instruction_chain = LLMChain(
-                llm=llm,
-                prompt=instruction_prompt,
-                memory=memory,
-                verbose=False
-            )
-            instruction_output = instruction_chain.predict(
-                human_input="",
-                persona=cfc.get_persona(),
-                number_of_sentences=config.num_sentences,
-            )
-
-            config.memory_buffer_string = memory.buffer_as_str
-            config.status = "pre_summary_conversation"
+            config.preprocessed = True
             db.session.commit()
 
-            return {"summary" : instruction_output}
-        
-        #### 6) PRE-SUMMARY CONVERSATION
-        if config.status == "pre_summary_conversation":
-            memory = cfc.get_memory_from_buffer_string(
-                config.memory_buffer_string
-            )
-            llm = cfc.get_llm(config.model_hub, config.model_name)
-
-            if not config.pre_summary_ready_to_go:
-                check_if_ready_prompt = PromptTemplate(
-                    input_variables=[
-                        "human_input",
-                        "chat_history",
-                        "persona"
-                    ],
-                    template=(
-                        """
-                        {persona}
-
-                        Here is the chat history so far:
-                        {chat_history}
-
-                        If "{human_input}" indicates that they are ready, output
-                        "Let's go" exactly. Follow this instruction exactly.
-                        If not, tell the human it's ok and ask if they have any
-                        other questions.
-
-                        YOUR RESPONSE:
-                        """
-                    )
-                )
-                check_if_ready_chain = LLMChain(
-                    llm=llm,
-                    prompt=check_if_ready_prompt,
-                    memory=memory,
-                    verbose=False
-                )
-                check_if_ready = check_if_ready_chain.predict(
-                    persona=cfc.get_persona(),
-                    human_input=HUMAN_MESSAGE,
-                )
-
-                if "Let's go" in check_if_ready:
-                    config.pre_summary_ready_to_go = True
-                    config.status = "summarization"
-            
-            config.memory_buffer_string = memory.buffer_as_str
-            db.session.commit()
-
-            return {"summary" : check_if_ready}
-
-        #### 7) SUMMARIZATION
+        #### 2) SUMMARIZATION
         if config.status == "summarization":
             memory = cfc.get_memory_from_buffer_string(
                 config.memory_buffer_string
@@ -645,7 +394,7 @@ def cogniflow_io():
                     "SUMMARIZATION DISCUSSION: should never go here"
                 )
 
-        #### 8) EXIT
+        #### 3) EXIT
         if config.status == "exit":
             return {"summary" : "Goodbye"}
         
