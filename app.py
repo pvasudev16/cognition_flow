@@ -46,7 +46,6 @@ db = SQLAlchemy(app)
 #    CogniFlow that they want to end early
 # 3) Exit.
 
-
 # For each CogniFlow session, we will have one Configuration record,
 # which tracks the input parameters and the state of the conversation
 class Configuration(db.Model):
@@ -122,6 +121,10 @@ class Configuration(db.Model):
         return f'memory_buffer: {self.memory_buffer_string}'
 
 CORS(app, supports_credentials=True) #comment this on deployment
+
+@app.route("/landing")
+def landing_page():
+    return "landing page"
 
 @app.route("/initialization", methods=["POST"])
 def initialize():
