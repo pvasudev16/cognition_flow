@@ -141,11 +141,9 @@ def initialize():
             raw_text=None,
             vector_db=None,
             memory_buffer_string=None,
-            intro_ready_to_go=False,
             status="welcome",
             sentences=None,
             cursor=0,
-            pre_summary_ready_to_go=False,
             summarization_keep_going = True,
             summaries=None,
             summarization_continue_conversation=True
