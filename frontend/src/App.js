@@ -15,10 +15,8 @@ const App = () => {
           </div>
           <Routes>
             <Route exact path="/" element={<CogniFlow/>}>
-              Main page
             </Route>
             <Route path="/landing" element={<LandingPage/>}>
-              Hello this is landing page
             </Route>
           </Routes>
         </Router>
