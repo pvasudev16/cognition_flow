@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(1, "./src")
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, Response
 from flask_cors import CORS #comment this on deployment
 
 from flask_sqlalchemy import SQLAlchemy
@@ -122,9 +122,11 @@ class Configuration(db.Model):
 
 CORS(app, supports_credentials=True) #comment this on deployment
 
-@app.route("/landing")
+@app.route("/landing", methods=["POST"])
 def landing_page():
-    return "landing page"
+    if request.method == "POST":
+        return Response("Hello Theo")
+    return Response("Hello")
 
 @app.route("/initialization", methods=["POST"])
 def initialize():

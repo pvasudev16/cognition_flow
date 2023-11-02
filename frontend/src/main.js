@@ -87,17 +87,15 @@ function CogniFlow() {
           <button type="submit">Initialize</button>
         </form>
         {/*<p>Init ouptut is: {initOutput}</p>*/}
-        {/*<p>The id is: {id}</p>*/}
+        <p>The id is: {id}</p>
         <br/>
         <br/>
         <form onSubmit={handleSubmit}>
-        <label>
-            ID:
-            <input
-              name="ID"
-              value={id}
-            />
-          </label>
+          <input
+            name="ID"
+            value={id}
+            type="hidden"
+          />
           <br/>
           <label>
             <br/>
