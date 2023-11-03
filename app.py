@@ -274,7 +274,7 @@ def cogniflow_io():
                     + str(c + config.num_sentences)
                     + " is:"
                     + summary.strip()
-                    + "\nThe actual text is:"
+                    + "\nThe actual text is:\n\n"
                     + next_sentences
                     + "\n"
                 )
@@ -293,11 +293,14 @@ def cogniflow_io():
                 config.summarization_continue_conversation = True
                 config.memory_buffer_string = memory.buffer_as_str
                 db.session.commit()
-                return {"summary" : summary_string}
+                return {
+                    "summary" : summary_string,
+                    "conversation" : config.memory_buffer_string,
+                    "status" : config.status,
+                    "summaries" : config.summaries
+                }
             else:
-                raise Exception(
-                    "SUMMARIZATION: should never go here"
-                )      
+                return {"summary" : "You've reached the end! Thanks for using CogniFlow!"}      
         
         if config.status == "summarization_discussion":
             memory = cfc.get_memory_from_buffer_string(
@@ -385,6 +388,9 @@ def cogniflow_io():
                 if "Let's keep going" in discussion_output:
                     config.summarization_continue_conversation=False
                     config.status = "summarization"
+                    config.memory_buffer_string = memory.buffer_as_str
+                    db.session.commit()
+                    return redirect("/", code=307)
                 if "Let's stop" in discussion_output:
                     config.summarization_continue_conversation=False
                     config.summarization_keep_going=False

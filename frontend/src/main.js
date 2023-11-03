@@ -1,22 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios'
+import { useLocation } from 'react-router-dom';
+import './App.css';
 
 function CogniFlow() {
-  const [mainData, setMainData] = useState('');
-
-  useEffect(() => {
-    // This will run when the component mounts
-    fetch('/')
-      .then(response => response.text())
-      .then(data => {
-        setMainData(data); // Store the data in your component's state
-      });
-  }, []); // The empty dependency array means this effect runs once when the component mounts
-
   // const [userInput, setUserInput] = useState("")
   const [summary, setSummary] = useState("")
-  const [initOutput, setInitOutput] = useState("")
-  const [id, setID] = useState("")
+  const [humanText, setHumanText] = useState('')
+  const [conversation, setConversation] = useState('')
+  const [status, setStatus] = useState('')
+  const [summaries, setSummaries] = useState("")
+  const [listItems, setListItems] = useState("")
+
+  const { state } = useLocation()
+  const id = state.id
+  console.log(state)
+
+
+  // const { id } = useParams() // on way
+
+  //^ is a shortcut to do this
+
+
+
+  // const newId = paramsObject.id
+  // useParams is passing an object with all the params. it will be
+  // a dictionary {id : 22}. Instead of assigning the object to the var
+  // (e.g. const new value = var.id), just immediately
+  // assign id to this variable id.
 
   // For debugging
   // console.log(summary)
@@ -30,62 +41,22 @@ function CogniFlow() {
     // setUserInput("")
     const response = await axios.post('http://127.0.0.1:5000/', formData)
     setSummary(response.data.summary)
+    setHumanText('')
+    setConversation(response.data.conversation)
+    setStatus(response.data.status)
+    const summaries = JSON.parse(response.data.summaries)
+    console.log(summaries)
+    const listItems = summaries.map((summary) =>
+    <li>{summary}</li>
+    );
+    setListItems(listItems)
     // Could also have done
     // axios.post('http://127.0.0.1:5000/', formData).then(response => setSummary(response.data.summary))
   }
-
-  const initParamsSubmit = async (e) => {
-    e.preventDefault();
-    // console.log(e);
-    const form = e.target;
-    const formData = new FormData(form);
-    const response = await axios.post('http://127.0.0.1:5000/initialization', formData)
-    setInitOutput(response.data.initialized)
-    setID(response.data.id)
-  }
-
+  
   return (
     <div className="App">
       <header className="App-header">
-        <form onSubmit={initParamsSubmit} method="post">
-          {/*
-            Use this to clear the field after hitting submit
-            <label>
-              NUM_SENTENCES:
-              <input
-                name="NUM_SENTENCES"
-                onChange={(e)=>setUserInput(e.target.value)}
-                value={userInput}/>
-            </label>
-          */}
-          <label>
-            NUM_SENTENCES:
-            <input
-              name="NUM_SENTENCES"
-              defaultValue="3"
-            />
-          </label>
-          <br/>
-          <label>
-            PATH_TO_FILE:
-            <input
-              name="PATH_TO_FILE"
-              defaultValue="./elephants_short.txt"
-            />
-          </label>
-          {/*<label>
-            Enter the text you want to summarize
-            <textarea
-              name="postContent"
-              defaultValue=""
-              rows={20}
-              cols={80}
-            />
-          </label>
-          <hr /> */}
-          <br/>
-          <button type="submit">Initialize</button>
-        </form>
         {/*<p>Init ouptut is: {initOutput}</p>*/}
         <p>The id is: {id}</p>
         <br/>
@@ -102,6 +73,8 @@ function CogniFlow() {
             <textarea
               name="HUMAN_MESSAGE"
               defaultValue=""
+              value={humanText}
+              onChange={e => setHumanText(e.target.value)}
               rows={5}
               cols={80}
             />
@@ -109,7 +82,15 @@ function CogniFlow() {
           <br/>
           <button type="submit">Return</button>
         </form>
-        <p>Chatbot ouptut is: {summary}</p>
+        <p>
+            {summary}
+            <br/>
+            <br/>
+            {status}
+            <br/>
+            <br/>
+            <ul>{listItems}</ul>
+        </p>
       </header>
     </div>
   )
