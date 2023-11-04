@@ -73,8 +73,8 @@ function CogniFlow() {
             <textarea
               name="HUMAN_MESSAGE"
               defaultValue=""
-              value={humanText}
-              onChange={e => setHumanText(e.target.value)}
+            //   value={humanText}
+            //   onChange={e => setHumanText(e.target.value)}
               rows={5}
               cols={80}
             />
