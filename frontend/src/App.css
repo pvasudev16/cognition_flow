@@ -41,6 +41,9 @@ ul {
   display: flex;
   flex-direction: column;
   flex-grow: 5;
+
+  height:224px;
+  overflow:auto;
 }
 /* From https://codepen.io/jacurtis/pen/jKzPZe */
 .flex-container > div:nth-child(odd) {
