@@ -29,6 +29,8 @@ function CogniFlow() {
     // Kill these two afterwards; just for debugging
     setSummary(response.data.summary)
     setStatus(response.data.status)
+    console.log(response.data.conversation)
+    console.log(status)
     convo = JSON.parse(response.data.conversation)
     listItems = convo.map((conversationElement) =>
     <div>{conversationElement}</div>
@@ -42,16 +44,13 @@ function CogniFlow() {
         <div class="flex-container">
             {listItems}
         </div>
-        <p>DEBUGGING: ID={id}</p>
-        <br/>
-        <br/>
+        {/* <p>DEBUGGING: ID={id}</p> */}
         <form onSubmit={handleSubmit}>
           <input
             name="ID"
             value={id}
             type="hidden"
           />
-          <br/>
           <label>
             <br/>
             <textarea

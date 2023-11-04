@@ -7,20 +7,14 @@
   pointer-events: none;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  /* align-items: center; */
+  /* justify-content: center; */
+  font-size: calc(10px + 1vmin);
   color: white;
 }
 
@@ -33,16 +27,12 @@ div {
   list-style-type: none;
 }
 
-ul {
-  list-style-type: none;
-}
-
 .flex-container {
   display: flex;
   flex-direction: column;
   flex-grow: 5;
 
-  height:224px;
+  height:100px;
   overflow:auto;
 }
 /* From https://codepen.io/jacurtis/pen/jKzPZe */
@@ -65,7 +55,7 @@ ul {
 		height:20px;
 		border-right:20px solid #0B93F6;
 		border-bottom-left-radius: 16px 14px;
-		transform:translate(0, -2px);
+		transform:translate(0, 2px);
 	}
 
 	&:after {
@@ -97,7 +87,7 @@ ul {
   &:before {
 		content:"";
 		position:absolute;
-		z-index:2;
+		z-index:1;
 		bottom:-2px;
 		left:-7px;
 		height:20px;
@@ -118,26 +108,4 @@ ul {
 		border-bottom-right-radius: 10px;
 		-webkit-transform:translate(-30px, -2px);
 	}
-  /* margin: 10px;
-  padding: 20px;
-  font-size: 30px; */
 }
-
-/* li:nth-child(odd) {
-  background:#abcdef;
-  max-width: 60%;
-  text-align: right;
-  border-radius: 8px;
-  margin-left: 10%;
-  display: inline-block;
-  
-}
-
-li:nth-child(even) {
-  background:#1234ab;
-  max-width: 60%;
-  text-align: left;
-  border-radius: 20px;
-  margin-left: 10%;
-  display: inline-block;
-} */
