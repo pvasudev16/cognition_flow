@@ -133,6 +133,30 @@ def landing_page():
         return Response("Hello Theo")
     return Response("Hello")
 
+@app.route("/append_to_conversation_history", methods=["POST"])
+def append_to_conversation_history():
+    HUMAN_MESSAGE = request.form['HUMAN_MESSAGE']
+    ID = request.form['ID']
+    config = Configuration.query.get(ID)
+    if request.method == "POST":
+        if not config.conversation_history:
+            conversation_history = []
+        else:
+            conversation_history = json.loads(
+                config.conversation_history
+            )
+        conversation_history.append(HUMAN_MESSAGE)
+        config.conversation_history = json.dumps(conversation_history)
+        db.session.commit()
+    return(
+        {
+            "conversation" : config.conversation_history,
+            "status" : "unknown",
+            "summary" : "No summary"
+        }
+    )
+
+
 @app.route("/initialization", methods=["POST"])
 def initialize():
     #### 0) INITIALIZATION
@@ -173,6 +197,7 @@ def cogniflow_io():
         HUMAN_MESSAGE = request.form['HUMAN_MESSAGE']
         ID = request.form['ID']
 
+        # Get the relevant record
         config = Configuration.query.get(ID)
 
         if not config.conversation_history:
@@ -180,15 +205,9 @@ def cogniflow_io():
         else:
             conversation_history = json.loads(
                 config.conversation_history
-            )
-        conversation_history.append(HUMAN_MESSAGE)
-        config.conversation_history = json.dumps(conversation_history)
-        db.session.commit()
-
-        # Get the relevant record
-        config = Configuration.query.get(ID)
-
+            )        
         
+        print(conversation_history)
         #### 1) PREPROCESSING
         preprocessed = config.preprocessed
         if not preprocessed:
@@ -316,9 +335,8 @@ def cogniflow_io():
                 db.session.commit()
                 return {
                     "summary" : summary_string,
-                    "conversation" : config.memory_buffer_string,
-                    "status" : config.status,
-                    "summaries" : config.summaries
+                    "conversation" : config.conversation_history,
+                    "status" : config.status
                 }
             else:
                 return {"summary" : "You've reached the end! Thanks for using CogniFlow!"}      
@@ -422,7 +440,11 @@ def cogniflow_io():
                     conversation_history
                 )
                 db.session.commit()
-                return {"summary" : discussion_output}
+                return {
+                    "summary" : discussion_output,
+                    "conversation" : config.conversation_history,
+                    "status" : ID
+                } #config.converation_history}
             else:
                 raise Exception(
                     "SUMMARIZATION DISCUSSION: should never go here"
