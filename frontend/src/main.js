@@ -6,9 +6,8 @@ import './App.css';
 function CogniFlow() {
   // const [userInput, setUserInput] = useState("")
   const [summary, setSummary] = useState("")
-  const [conversationHistoryRaw, setConversationHistoryRaw] = useState('')
-  const [status, setStatus] = useState('')
-  const [listItems, setListItems] = useState("")
+  const [status, setStatus] = useState("")
+  let [listItems, setListItems] = useState([])
 
   const { state } = useLocation()
   const id = state.id
@@ -18,16 +17,16 @@ function CogniFlow() {
     // Read the form data
     const form = e.target;
     const formData = new FormData(form);
-    let response = await axios.post('http://127.0.0.1:5000/append_to_conversation_history', formData)
-    console.log(response.data.conversation)
+    let response = await axios.post('http://127.0.0.1:5000/post_human_message', formData)
     let convo = JSON.parse(response.data.conversation)
     let listItems = convo.map((conversationElement) =>
     <li>{conversationElement}</li>
     );
     setListItems(listItems)
+    console.log(listItems)
+    response = await axios.post('http://127.0.0.1:5000/get_ai_response', formData)
 
-    response = await axios.post('http://127.0.0.1:5000/', formData)
-    console.log(response.data.conversation)
+    // Kill these two afterwards; just for debugging
     setSummary(response.data.summary)
     setStatus(response.data.status)
     convo = JSON.parse(response.data.conversation)
@@ -72,7 +71,9 @@ function CogniFlow() {
             {status}
             <br/>
             <br/> */}
-            <ul>{listItems}</ul>
+            <ul>
+                {listItems}
+            </ul>
         </p>
       </header>
     </div>

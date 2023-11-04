@@ -32,6 +32,20 @@ div {
   white-space: pre-wrap;
 }
 
+ul {
+  list-style-type : none;
+}
+
+li:nth-child(odd) {
+  background:#abcdef;
+  text-align: right;
+}
+
+li:nth-child(even) {
+  background:#1234ab;
+  text-align: left;
+}
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);

@@ -133,8 +133,8 @@ def landing_page():
         return Response("Hello Theo")
     return Response("Hello")
 
-@app.route("/append_to_conversation_history", methods=["POST"])
-def append_to_conversation_history():
+@app.route("/post_human_message", methods=["POST"])
+def post_human_message():
     HUMAN_MESSAGE = request.form['HUMAN_MESSAGE']
     ID = request.form['ID']
     config = Configuration.query.get(ID)
@@ -191,8 +191,8 @@ def initialize():
         }
         
                                          
-@app.route("/", methods=["POST"])
-def cogniflow_io():
+@app.route("/get_ai_response", methods=["POST"])
+def get_ai_response():
     if request.method == "POST":
         HUMAN_MESSAGE = request.form['HUMAN_MESSAGE']
         ID = request.form['ID']
@@ -207,7 +207,10 @@ def cogniflow_io():
                 config.conversation_history
             )        
         
-        print(conversation_history)
+        # conversation_history.append(HUMAN_MESSAGE)
+        # config.conversation_history = json.dumps(conversation_history)
+        # db.session.commit() # Needed here?
+
         #### 1) PREPROCESSING
         preprocessed = config.preprocessed
         if not preprocessed:
@@ -430,7 +433,7 @@ def cogniflow_io():
                     config.status = "summarization"
                     config.memory_buffer_string = memory.buffer_as_str
                     db.session.commit()
-                    return redirect("/", code=307)
+                    return redirect("/get_ai_response", code=307)
                 if "Let's stop" in discussion_output:
                     config.summarization_continue_conversation=False
                     config.summarization_keep_going=False
