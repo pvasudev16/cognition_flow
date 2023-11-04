@@ -20,7 +20,7 @@ function CogniFlow() {
     let response = await axios.post('http://127.0.0.1:5000/post_human_message', formData)
     let convo = JSON.parse(response.data.conversation)
     let listItems = convo.map((conversationElement) =>
-    <li>{conversationElement}</li>
+    <div>{conversationElement}</div>
     );
     setListItems(listItems)
     console.log(listItems)
@@ -31,7 +31,7 @@ function CogniFlow() {
     setStatus(response.data.status)
     convo = JSON.parse(response.data.conversation)
     listItems = convo.map((conversationElement) =>
-    <li>{conversationElement}</li>
+    <div>{conversationElement}</div>
     );
     setListItems(listItems)
   }
@@ -39,8 +39,10 @@ function CogniFlow() {
   return (
     <div className="App">
       <header className="App-header">
-        {/*<p>Init ouptut is: {initOutput}</p>*/}
-        <p>The id is: {id}</p>
+        <div class="flex-container">
+            {listItems}
+        </div>
+        <p>DEBUGGING: ID={id}</p>
         <br/>
         <br/>
         <form onSubmit={handleSubmit}>
@@ -64,17 +66,6 @@ function CogniFlow() {
           <br/>
           <button type="submit">Return</button>
         </form>
-        <p>
-            {/* {summary}
-            <br/>
-            <br/>
-            {status}
-            <br/>
-            <br/> */}
-            <ul>
-                {listItems}
-            </ul>
-        </p>
       </header>
     </div>
   )
