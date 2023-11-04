@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(1, "./src")
-from flask import Flask, request, redirect, Response
+from flask import Flask, request, redirect, Response, url_for
 from flask_cors import CORS #comment this on deployment
 
 from flask_sqlalchemy import SQLAlchemy
@@ -102,6 +102,11 @@ class Configuration(db.Model):
     # and displayed.
     cursor = db.Column(db.Integer)
 
+    # A JSON dump of the conversation history, which will alternate
+    # between what the chatbot says (including actual text of)
+    # the article and what the human says.
+    conversation_history = db.Column(db.Text)
+
     # A boolean flag indicating in the summarization whether
     # the user is ready to keep going.
     summarization_keep_going = db.Column(db.Boolean)
@@ -146,7 +151,8 @@ def initialize():
             status="welcome",
             sentences=None,
             cursor=0,
-            summarization_keep_going = True,
+            conversation_history=None,
+            summarization_keep_going=True,
             summaries=None,
             summarization_continue_conversation=True
         )
@@ -159,12 +165,25 @@ def initialize():
             "initialized" : "initialized",
             "id" : config.id
         }
-
+        
+                                         
 @app.route("/", methods=["POST"])
 def cogniflow_io():
     if request.method == "POST":
         HUMAN_MESSAGE = request.form['HUMAN_MESSAGE']
         ID = request.form['ID']
+
+        config = Configuration.query.get(ID)
+
+        if not config.conversation_history:
+            conversation_history = []
+        else:
+            conversation_history = json.loads(
+                config.conversation_history
+            )
+        conversation_history.append(HUMAN_MESSAGE)
+        config.conversation_history = json.dumps(conversation_history)
+        db.session.commit()
 
         # Get the relevant record
         config = Configuration.query.get(ID)
@@ -278,6 +297,7 @@ def cogniflow_io():
                     + next_sentences
                     + "\n"
                 )
+                conversation_history.append(summary_string)
 
                 # Advance the cursor by NUM_SENTENCES
                 c += config.num_sentences
@@ -292,6 +312,7 @@ def cogniflow_io():
                 config.status = "summarization_discussion"
                 config.summarization_continue_conversation = True
                 config.memory_buffer_string = memory.buffer_as_str
+                config.conversation_history = json.dumps(conversation_history)
                 db.session.commit()
                 return {
                     "summary" : summary_string,
@@ -385,6 +406,7 @@ def cogniflow_io():
                         )
                     )
                 )
+                conversation_history.append(discussion_output)
                 if "Let's keep going" in discussion_output:
                     config.summarization_continue_conversation=False
                     config.status = "summarization"
@@ -396,6 +418,9 @@ def cogniflow_io():
                     config.summarization_keep_going=False
                     config.status = "exit"
                 config.memory_buffer_string = memory.buffer_as_str
+                config.conversation_history = json.dumps(
+                    conversation_history
+                )
                 db.session.commit()
                 return {"summary" : discussion_output}
             else:
