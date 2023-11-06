@@ -221,7 +221,6 @@ def get_ai_response():
             # Store raw text
             raw_text = cfc.get_raw_text(PATH_TO_FILE)
             config.raw_text = raw_text
-            config.preprocessed = True
 
             # Get embeddings to make vector database and store it
             embeddings = cfc.get_embeddings(MODEL_HUB, MODEL_NAME)
