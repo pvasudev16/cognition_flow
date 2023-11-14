@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from uuid import uuid4
 
 db = SQLAlchemy()
 
@@ -8,6 +9,8 @@ db = SQLAlchemy()
 # For each CogniFlow session, we will have one Configuration record,
 # which tracks the input parameters and the state of the conversation
 class Configuration(db.Model):
+    __tablename__ = "configuration"
+
     #### Primary integer key
     id = db.Column(db.Integer, primary_key=True)
 
@@ -83,3 +86,19 @@ class Configuration(db.Model):
 
     def __repr__(self):
         return f'memory_buffer: {self.memory_buffer_string}'
+
+# Taken from:
+# https://github.com/ahnaf-zamil/flask-react-session-authenticaton-tutorial/blob/master/server/models.py    
+def get_uuid():
+    return uuid4().hex
+
+class User(db.Model):
+    __tablename__ = "users"
+    id = db.Column(
+        db.String(32),
+        primary_key=True,
+        unique=True,
+        default=get_uuid
+    )
+    email = db.Column(db.String(345), unique=True)
+    password = db.Column(db.Text, nullable=False)

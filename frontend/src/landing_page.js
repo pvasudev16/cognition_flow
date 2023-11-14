@@ -58,7 +58,7 @@ return (
             PATH_TO_FILE:
             <input
               name="PATH_TO_FILE"
-              defaultValue="./elephants_short.txt"
+              defaultValue="../elephants_short.txt"
             />
           </label>
           {/*<label>
