@@ -1,29 +1,31 @@
-import sys
-sys.path.insert(1, "./src")
-from flask import Flask, request, redirect, Response, url_for
-from flask_cors import CORS #comment this on deployment
 
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.sql import func
+from flask import Flask, request, redirect, Response, session
+from flask_cors import CORS #comment this on deployment
+from flask_session import Session
+from flask_bcrypt import Bcrypt
+from models import db, Configuration
+from config import ApplicationConfig
+
+
+# from flask_sqlalchemy import SQLAlchemy
+# from sqlalchemy.sql import func
 import os
 
-import services.cogniflow_core as cfc
-from src.util import * # I'd like to get rid of this
+import cogniflow_core as cfc
+from util import * # I'd like to get rid of this
 
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 import stanza
 import json
 
-# Following SQLAlchemy tutorial at https://www.digitalocean.com/community/tutorials/how-to-use-flask-sqlalchemy-to-interact-with-databases-in-a-flask-application
-basedir = os.path.abspath(os.path.dirname(__file__))
-app = Flask(__name__) #, static_url_path='', static_folder='frontend/build')
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    'sqlite:///'
-    + os.path.join(basedir, 'database.db')
-)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+
+app = Flask(__name__)
+app.config.from_object(ApplicationConfig)
+CORS(app, supports_credentials=True) #comment this on deployment
+db.init_app(app)
+with app.app_context():
+    db.create_all()
 
 #### Terminology:
 # - N: number of sentences to parse at a time. This is the number of
@@ -46,86 +48,8 @@ db = SQLAlchemy(app)
 #    CogniFlow that they want to end early
 # 3) Exit.
 
-# For each CogniFlow session, we will have one Configuration record,
-# which tracks the input parameters and the state of the conversation
-class Configuration(db.Model):
-    #### Primary integer key
-    id = db.Column(db.Integer, primary_key=True)
 
-    #### Input paramers:
-    ####
-    # Number of sentences to parse at a time
-    num_sentences = db.Column(db.Integer)
 
-    # Local path to text file or URL to web page
-    path_to_file = db.Column(db.String(4096))
-
-    # Model hub to use (by deafult, OpeanAI)
-    model_hub = db.Column(db.String(100))
-
-    # Model to use (by default, text-davinci-003) 
-    model_name = db.Column(db.String(100))
-
-    #### CogniFlow State Variables
-    ####
-    # A boolean flag indicating if CogniFlow has read in the
-    # number of sentences to parse, the path to file/URL,
-    # the model hub, and the model
-    preprocessed = db.Column(db.Boolean)
-
-    # The raw text read in from the URL or the text file. If 
-    # path_to_file is a URL, this variable will not only hold the
-    # actual text but also all the metadata
-    raw_text = db.Column(db.Text)
-
-    # The vector database. Get the embeddings (using the same
-    # model_hub and model_name), chunk the text, and form a
-    # FAISS vector database, holding the semantic meaning of the text
-    vector_db = db.Column(db.LargeBinary)
-
-    # The memory buffer as a string. To decode the memory into a
-    # LangChain ConversationBufferMemory object, use
-    # cfc.get_memory_buffer_from_string(). To encode a
-    # ConversationBufferMemory object into a string, we just do
-    # memory.buffer_as_str
-    memory_buffer_string = db.Column(db.Text)
-
-    # A JSON dump of the vector of the human-parseable sentences
-    # in the text. This excludes any metadata/garbage in text
-    # scraped from URLs.
-    sentences = db.Column(db.Text)
-
-    # The number of sentences in the text
-    number_of_sentences_in_text = db.Column(db.Integer)
-
-    # A cursor indicating how many sentences have been summarized
-    # and displayed.
-    cursor = db.Column(db.Integer)
-
-    # A JSON dump of the conversation history, which will alternate
-    # between what the chatbot says (including actual text of)
-    # the article and what the human says.
-    conversation_history = db.Column(db.Text)
-
-    # A boolean flag indicating in the summarization whether
-    # the user is ready to keep going.
-    summarization_keep_going = db.Column(db.Boolean)
-
-    # A JSON dump of the vector of summaries CogniFlow has made
-    # so far
-    summaries = db.Column(db.Text)
-
-    # A boolean flag indicating after displaying the summaries if
-    # to keep going in the conversation.
-    summarization_continue_conversation = db.Column(db.Boolean)
-
-    # Status
-    status = db.Column(db.String(50))
-
-    def __repr__(self):
-        return f'memory_buffer: {self.memory_buffer_string}'
-
-CORS(app, supports_credentials=True) #comment this on deployment
 
 @app.route("/landing", methods=["POST"])
 def landing_page():
