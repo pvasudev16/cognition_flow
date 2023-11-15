@@ -35,12 +35,7 @@ def register_user():
     user_exists = User.query.filter_by(email=email).first() is not None
 
     if user_exists:
-        return (
-            {
-                "error" : "User already exists"
-            },
-            409
-        )
+        return ({"error" : "User already exists"}, 409)
 
     hashed_password = bcrypt.generate_password_hash(password)
     new_user = User(email=email, password=hashed_password)
@@ -52,6 +47,38 @@ def register_user():
     return {
         "id": new_user.id,
         "email": new_user.email
+    }
+
+@app.route("/login", methods=["POST"])
+def login_user():
+    email = request.form["email"]
+    password = request.form["password"]
+
+    user = User.query.filter_by(email=email).first()
+
+    if user is None:
+        return ({"error": "Unauthorized"}, 401)
+
+    if not bcrypt.check_password_hash(user.password, password):
+        return ({"error": "Unauthorized"}, 401)
+    
+    session["user_id"] = user.id
+
+    return {
+        "id": user.id,
+        "email": user.email
+    }
+@app.route("/@me")
+def get_current_user():
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return ({"error": "Unauthorized"}, 401)
+    
+    user = User.query.filter_by(id=user_id).first()
+    return {
+        "id": user.id,
+        "email": user.email
     }
 
 #### Terminology:

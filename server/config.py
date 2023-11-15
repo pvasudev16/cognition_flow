@@ -1,6 +1,8 @@
 import dotenv
 import os
-# import redis
+import redis
+from models import db
+from datetime import timedelta
 
 dotenv.load_dotenv()
 environment_values = dotenv.dotenv_values()
@@ -16,7 +18,9 @@ class ApplicationConfig:
         + os.path.join(basedir, 'database.db')
     )
 
-    # SESSION_TYPE = "redis"
-    # SESSION_PERMANENT = False
-    # SESSION_USE_SIGNER = True
-    # SESSION_REDIS = redis.from_url("redis::127.0.0.01:6379")
+    SESSION_TYPE = "sqlalchemy"
+    SESSION_PERMANENT = True
+    SESSION_USE_SIGNER = True
+    SESSION_SQLALCHEMY_TABLE="sessions"
+    SESSION_SQLALCHEMY=db
+    PERMANENT_SESSION_LIFETIME = timedelta(seconds=10)
