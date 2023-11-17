@@ -5,7 +5,7 @@ const LandingPage = () => {
     const [user, setUser] = useState(null)
 
     const logoutUser = async () => {
-        await httpClient.post("//localhost:5000/logout");
+        await httpClient.post("http://127.0.0.1:5000/logout");
         window.location.href = "/";
     };
 

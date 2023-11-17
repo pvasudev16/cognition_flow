@@ -91,6 +91,16 @@ def login_user():
         "session" : session
     }
 
+@app.route("/logout", methods=["POST"])
+def logout_user():
+    print(session)
+    session.pop("user_id")
+    return (
+        {
+            "message" : "logged out"
+        },
+        200)
+
 #### Terminology:
 # - N: number of sentences to parse at a time. This is the number of
 #      sentences CogniFlow will summarize and display at a time.
