@@ -1,6 +1,6 @@
 
-from flask import Flask, request, redirect, Response, session
-from flask_cors import CORS #comment this on deployment
+from flask import Flask, request, redirect, Response, session, jsonify
+from flask_cors import CORS, cross_origin
 from flask_session import Session
 from flask_bcrypt import Bcrypt
 from models import db, Configuration, User
@@ -19,7 +19,11 @@ app = Flask(__name__)
 app.config.from_object(ApplicationConfig)
 
 bcrypt = Bcrypt(app)
-CORS(app, supports_credentials=True) #comment this on deployment ??
+CORS(
+    app,
+    supports_credentials=True
+) #comment this on deployment ??
+
 server_session = Session(app)
 db.init_app(app)
 
@@ -27,6 +31,22 @@ with app.app_context():
     db.create_all()
 
 # Login stuff
+@app.route("/@me", methods=["GET"])
+def get_current_user():
+    print(session)
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return ({"error": "Unauthorized"}, 401)
+    
+    user = User.query.filter_by(id=user_id).first()
+
+    return {
+        "id": user.id,
+        "email": user.email,
+        "session" : session
+    }
+
 @app.route("/register", methods=["POST"])
 def register_user():
     email = request.form["email"]
@@ -51,8 +71,8 @@ def register_user():
 
 @app.route("/login", methods=["POST"])
 def login_user():
-    email = request.form["email"]
-    password = request.form["password"]
+    email = request.json["email"]
+    password = request.json["password"]
 
     user = User.query.filter_by(email=email).first()
 
@@ -64,21 +84,11 @@ def login_user():
     
     session["user_id"] = user.id
 
+    print(session)
     return {
         "id": user.id,
-        "email": user.email
-    }
-@app.route("/@me")
-def get_current_user():
-    user_id = session.get("user_id")
-
-    if not user_id:
-        return ({"error": "Unauthorized"}, 401)
-    
-    user = User.query.filter_by(id=user_id).first()
-    return {
-        "id": user.id,
-        "email": user.email
+        "email": user.email,
+        "session" : session
     }
 
 #### Terminology:
