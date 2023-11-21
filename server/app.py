@@ -17,7 +17,7 @@ import json
 
 app = Flask(__name__)
 app.config.from_object(ApplicationConfig)
-app.config["SESSION_COOKIE_SAMESITE"] = "None"
+# app.config["SESSION_COOKIE_SAMESITE"] = "None"
 
 bcrypt = Bcrypt(app)
 cors_app = CORS(

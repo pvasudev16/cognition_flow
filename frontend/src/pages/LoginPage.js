@@ -8,7 +8,7 @@ const LoginPage = () => {
     const logInUser = async (e) => {
         console.log(email, password);
         try {
-            await httpClient.post("http://127.0.0.1:5000/login",{
+            await httpClient.post("//localhost:5000/login",{
                 email,
                 password
             });

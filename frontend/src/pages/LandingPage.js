@@ -5,14 +5,14 @@ const LandingPage = () => {
     const [user, setUser] = useState(null)
 
     const logoutUser = async () => {
-        await httpClient.post("http://127.0.0.1:5000/logout");
+        await httpClient.post("//localhost:5000/logout");
         window.location.href = "/";
     };
 
     useEffect(() => {
         (async () => {
             try {
-                const resp = await httpClient.get("http://127.0.0.1:5000/@me");
+                const resp = await httpClient.get("//localhost:5000/@me");
                 console.log(resp)
                 setUser(resp.data);
             } catch(error) {
