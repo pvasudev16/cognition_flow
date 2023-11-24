@@ -1,5 +1,5 @@
 
-from flask import Flask, request# , session
+from flask import Flask, request
 from flask_cors import CORS
 # from flask_session import Session
 from flask_bcrypt import Bcrypt
@@ -49,7 +49,8 @@ def check_session():
         session_start_time = session.start_time
         now_time = datetime.datetime.now()
         time_difference = (now_time - session_start_time).total_seconds()
-        if time_difference >= 3 * 3600:
+        print(time_difference)
+        if time_difference >= 3600. * 3.:
             return ({"error": "Unauthorized"}, 401)
     
 
@@ -58,6 +59,9 @@ def get_current_user():
     token = request.cookies.get("token")
     if token is not None:
         session = Session.query.get(token)
+        print(session)
+        if not session:
+            return ({"error": "Unauthorized"}, 401)
         user = User.query.get(session.user_id)
         return(
             {

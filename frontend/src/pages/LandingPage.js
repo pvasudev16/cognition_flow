@@ -15,7 +15,7 @@ const LandingPage = () => {
         (async () => {
             try {
                 const token = Cookies.get("token")
-                console.log(token)
+                // console.log(token)
                 const resp = await httpClient.get(
                     "//localhost:5000/@me",
                     {
@@ -24,10 +24,11 @@ const LandingPage = () => {
                         }
                     }
                 );
-                console.log(resp)
+                // console.log(resp)
                 setUser(resp.data);
             } catch(error) {
-                console.log("Not authenticated")
+                // console.log("Not authenticated")
+                Cookies.remove("token", {path : "/"})
             }
         })();
     }, []);
@@ -38,8 +39,8 @@ const LandingPage = () => {
             {user != null ? (
                 <div>
                     <h2>Logged in</h2>
-                    {/* <h3>ID: {user.id}</h3>
-                    <h3>Email: {user.email}</h3> */}
+                    <h3>ID: {user.id}</h3>
+                    <h3>Email: {user.email}</h3>
                     <button onClick={logoutUser}>Logout</button>
                 </div>
             ) : (

@@ -15,13 +15,15 @@ const RegisterPage =() => {
 
       // Get the token and store it in a cookie
       Cookies.set("token", response.data.token, {path : "/"})
-      console.log(Cookies.get('token'));
-      console.log("Cooke above is from register page")
+      // console.log(Cookies.get('token'));
 
       window.location.href = "/";
     } catch (error) {
       if (error.response.status === 401) {
         alert("Invalid credentials");
+      }
+      else if(error.response.status === 409) {
+        alert("User already exists")
       }
     }
   };

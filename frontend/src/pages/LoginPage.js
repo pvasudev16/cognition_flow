@@ -16,7 +16,7 @@ const LoginPage = () => {
 
             // Get the token and store it in a cookie
             Cookies.set("token", response.data.token, {path : "/"})
-            console.log(Cookies.get('token'));
+            // console.log(Cookies.get('token'));
 
             window.location.href = "/";
         }
