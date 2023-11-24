@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState} from "react";
 import httpClient from "../httpClient";
+import Cookies from 'js-cookie'
 
 const RegisterPage =() => {
   const [email, setEmail] = useState("pvasudev@pvasudev.ca");
@@ -7,10 +8,15 @@ const RegisterPage =() => {
 
   const registerUser = async () => {
     try {
-      await httpClient.post("//localhost:5000/register", {
+      const response = await httpClient.post("//localhost:5000/register", {
         email,
         password,
       });
+
+      // Get the token and store it in a cookie
+      Cookies.set("token", response.data.token, {path : "/"})
+      console.log(Cookies.get('token'));
+      console.log("Cooke above is from register page")
 
       window.location.href = "/";
     } catch (error) {

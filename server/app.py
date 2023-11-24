@@ -1,10 +1,12 @@
 
-from flask import Flask, request, session
+from flask import Flask, request# , session
 from flask_cors import CORS
-from flask_session import Session
+# from flask_session import Session
 from flask_bcrypt import Bcrypt
-from models import db, Configuration, User
+from models import db, Configuration, User, Session
 from config import ApplicationConfig
+from uuid import uuid4
+import datetime
 
 import cogniflow_core as cfc
 from util import * # I'd like to get rid of this
@@ -25,27 +27,46 @@ cors_app = CORS(
     supports_credentials=True
 )
 
-server_session = Session(app)
+# server_session = Session(app)
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
 
 # Login stuff
+
+@app.before_request
+def check_session():
+    print(request.cookies)
+    if request.cookies.get("token") is not None:
+        token = request.cookies.get("token")
+        print(token)
+        session = Session.query.get(token)
+        print(session)
+
+        # Check that session hasn't exceeded session time limit of
+        # 3 hours
+        session_start_time = session.start_time
+        now_time = datetime.datetime.now()
+        time_difference = (now_time - session_start_time).total_seconds()
+        if time_difference >= 3 * 3600:
+            return ({"error": "Unauthorized"}, 401)
+    
+
 @app.route("/@me", methods=["GET"])
 def get_current_user():
-    user_id = session.get("user_id")
-    print(session)
-    if not user_id:
+    token = request.cookies.get("token")
+    if token is not None:
+        session = Session.query.get(token)
+        user = User.query.get(session.user_id)
+        return(
+            {
+                "id" : user.id,
+                "email" : user.email
+            }
+        )
+    else:
         return ({"error": "Unauthorized"}, 401)
-    
-    user = User.query.filter_by(id=user_id).first()
-
-    return ({
-        "id": user.id,
-        "email": user.email,
-        "session" : session
-    }, 200)
 
 @app.route("/register", methods=["POST"])
 def register_user():
@@ -62,12 +83,21 @@ def register_user():
     db.session.add(new_user)
     db.session.commit()
 
-    session["user_id"] = new_user.id
-    print(session)
+    # session["user_id"] = new_user.id
+    # print(session)
+    token = uuid4().hex
+    new_session = Session(
+        id=token,
+        start_time=datetime.datetime.now(),
+        user_id=new_user.id
+    )
+    db.session.add(new_session)
+    db.session.commit()
 
     return ({
-        "id": new_user.id,
-        "email": new_user.email
+        "id" : new_user.id,
+        "email" : new_user.email,
+        "token" : token
     }, 200)
 
 @app.route("/login", methods=["POST"])
@@ -83,23 +113,29 @@ def login_user():
     if not bcrypt.check_password_hash(user.password, password):
         return ({"error": "Unauthorized"}, 401)
     
-    session["user_id"] = user.id
+    # session["user_id"] = user.id
+    # print(session)
+    token = uuid4().hex
+    new_session = Session(
+        id=token,
+        start_time=datetime.datetime.now(),
+        user_id=user.id
+    )
+    db.session.add(new_session)
+    db.session.commit()
 
-    print(session)
     return  ({
         "id": user.id,
-        "email": user.email
+        "email": user.email,
+        "token" : token
     }, 200)
 
 @app.route("/logout", methods=["POST"])
 def logout_user():
-    print(session)
-    session.pop("user_id")
-    return (
-        {
-            "message" : "logged out"
-        },
-        200)
+    token = request.cookies.get("token")
+    Session.query.filter_by(id=token).delete()
+    db.session.commit()
+    return ({"message" : "logged out"}, 200)
 
 #### Terminology:
 # - N: number of sentences to parse at a time. This is the number of

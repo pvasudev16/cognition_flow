@@ -1,5 +1,6 @@
 import React, {useState} from 'react'
 import httpClient from '../httpClient'
+import Cookies from 'js-cookie'
 
 const LoginPage = () => {
     const [email, setEmail] = useState("pvasudev@pvasudev.ca")
@@ -8,10 +9,15 @@ const LoginPage = () => {
     const logInUser = async (e) => {
         console.log(email, password);
         try {
-            await httpClient.post("//localhost:5000/login",{
+            const response = await httpClient.post("//localhost:5000/login",{
                 email,
                 password
             });
+
+            // Get the token and store it in a cookie
+            Cookies.set("token", response.data.token, {path : "/"})
+            console.log(Cookies.get('token'));
+
             window.location.href = "/";
         }
         catch(error) {

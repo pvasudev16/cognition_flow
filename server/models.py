@@ -102,3 +102,9 @@ class User(db.Model):
     )
     email = db.Column(db.String(345), unique=True)
     password = db.Column(db.Text, nullable=False)
+
+class Session(db.Model):
+    __tablename__ = "manual_sessions"
+    id = db.Column(db.String, primary_key=True, unique=True)
+    start_time = db.Column(db.DateTime)
+    user_id = db.Column(db.String(32))
