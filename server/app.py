@@ -122,13 +122,6 @@ def logout_user():
 #    CogniFlow that they want to end early
 # 3) Exit.
 
-
-# @app.route("/landing", methods=["POST"])
-# def landing_page():
-#     if request.method == "POST":
-#         return Response("Hello Theo")
-#     return Response("Hello")
-
 # @app.route("/post_human_message", methods=["POST"])
 # def post_human_message():
 #     HUMAN_MESSAGE = request.form['HUMAN_MESSAGE']
