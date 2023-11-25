@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import httpClient from '../httpClient';
+import '../index.css'
 
 const CogniFlow = () => {
     // const [summary, setSummary] = useState(null)
@@ -36,23 +37,25 @@ const CogniFlow = () => {
     }
 
     return(
-        <div>
-            <div>
-                {listItems}
-            </div>
-            <div>
-                <form>
-                    <textarea
-                        name="humanMessage"
-                        rows={5}
-                        cols={80}
-                        value={humanText}
-                        onChange={e => setHumanText(e.target.value)}
-                    />
-                </form>
-                <button type="button" onClick={() => chatbotIO()}>
-                    Return
-                </button>
+        <div class="App">
+            <div class="conversation">
+                <div class="flex-container">
+                    {listItems}
+                </div>
+                <div>
+                    <form>
+                        <textarea
+                            name="humanMessage"
+                            rows={5}
+                            cols={80}
+                            value={humanText}
+                            onChange={e => setHumanText(e.target.value)}
+                        />
+                    </form>
+                    <button type="button" onClick={() => chatbotIO()}>
+                        Return
+                    </button>
+                </div>
             </div>
         </div>
     )

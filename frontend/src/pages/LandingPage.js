@@ -34,7 +34,7 @@ const LandingPage = () => {
     }
 
     return(
-        <div>
+        <div class="App">
             <h1>Welcome to CogniFlow!</h1>
         
             {user != null ? (
