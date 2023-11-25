@@ -8,7 +8,7 @@ from langchain.memory import ConversationBufferMemory
 from langchain.vectorstores import FAISS
 from newspaper import Article
 
-from src.util import *
+from util import *
 
 # INPUT PARSING
 def get_raw_text(PATH_TO_FILE):
