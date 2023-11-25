@@ -4,17 +4,23 @@ import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
 import RegisterPage from "./pages/RegisterPage";
 import CogniFlow from "./pages/CogniFlow";
+import ProfilePage from "./pages/ProfilePage"
+import NavBar from "./components/NavBar";
 
 const Router = () => {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" exact element={<LandingPage/>} />
-        <Route path="/login" exact element={<LoginPage/>} />
-        <Route path="/register" exact element={<RegisterPage />} />
-        <Route path="/app" exact element={<CogniFlow/>}/>
-        <Route path="*" element={<NotFound/>} />
-      </Routes>
+    <div className="App">
+        <NavBar/>
+        <Routes>
+          <Route path="/" exact element={<LandingPage/>} />
+          <Route path="/login" exact element={<LoginPage/>} />
+          <Route path="/register" exact element={<RegisterPage />} />
+          <Route path="/app" exact element={<CogniFlow/>}/>
+          <Route path="/profile" exact element={<ProfilePage/>}/>
+          <Route path="*" element={<NotFound/>} />
+        </Routes>
+    </div>
     </BrowserRouter>
   );
 };
