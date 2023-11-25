@@ -22,7 +22,7 @@ const LoginPage = () => {
         }
     };
     return (
-        <div>
+        <div class="App">
             <h1>Log into your account </h1>
             <form>
                 <div>

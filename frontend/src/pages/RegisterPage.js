@@ -21,7 +21,7 @@ const RegisterPage =() => {
   };
 
   return (
-    <div>
+    <div class="App">
       <h1>Create an account</h1>
       <form>
         <div>
