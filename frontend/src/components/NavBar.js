@@ -29,7 +29,7 @@ const NavBar = () => {
     return (
         <nav>
             <Link to="/" className="title">
-                Website
+                CogniFlow Home
             </Link>
             <div className="menu" onClick={() => setMenuOpen(!menuOpen)}>
                 <span></span>
@@ -53,7 +53,7 @@ const NavBar = () => {
                             <NavLink to="/login">Login</NavLink>
                         </li>
                         <li>
-                            <NavLink to="/register">Logout</NavLink>
+                            <NavLink to="/register">Register</NavLink>
                         </li>
                     </>
                 )
