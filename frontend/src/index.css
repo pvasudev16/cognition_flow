@@ -12,16 +12,24 @@ code {
 }
 
 .buttons{
-  margin: 10px;
+  margin: 1px;
+  font-size: 18px
 }
 
 label {
   font-size: 20px;
 }
 
-input {
+input.url {
   font-size: 18px;
   margin-left: 5px;
+  width: 700px
+}
+
+input.numSentences {
+  font-size: 18px;
+  margin-left: 5px;
+  width: 70px
 }
 
 .App {
@@ -34,10 +42,7 @@ input {
   /* justify-content: center; */
   font-size: calc(10px + 1vmin);
   color: white;
-}
-
-.conversation {
-  text-align: center;
+  margin: auto;
 }
 
 .App-link {
@@ -47,6 +52,37 @@ input {
 div {
   white-space: pre-wrap;
   list-style-type: none;
+}
+
+div.bodycontent {
+  text-align: center;
+  width: 1000px
+}
+
+div.leftalign {
+  text-align: left;
+}
+
+p.bodytext {
+  text-align: left;
+}
+
+h1.title {
+  text-align: center;
+}
+
+h2.subtitle { 
+  font-variant: small-caps;
+  text-align: left;
+}
+
+.conversation {
+  text-align: center;
+}
+
+
+.App-link {
+  color: #61dafb;
 }
 
 .flex-container {

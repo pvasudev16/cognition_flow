@@ -5,6 +5,7 @@ import NotFound from "./pages/NotFound";
 import RegisterPage from "./pages/RegisterPage";
 import CogniFlow from "./pages/CogniFlow";
 import ProfilePage from "./pages/ProfilePage"
+import LogoutPage from "./pages/LogoutPage";
 import NavBar from "./components/NavBar";
 
 const Router = () => {
@@ -18,6 +19,7 @@ const Router = () => {
           <Route path="/register" exact element={<RegisterPage />} />
           <Route path="/app" exact element={<CogniFlow/>}/>
           <Route path="/profile" exact element={<ProfilePage/>}/>
+          <Route path="/logout" exact element={<LogoutPage/>}/>
           <Route path="*" element={<NotFound/>} />
         </Routes>
     </div>
